@@ -1,0 +1,158 @@
+// ============================================================
+// Ludo Board Geometry
+// 15x15 classic cross board, clockwise loop of 52 cells.
+// Colors: red top-left, green top-right, yellow bottom-right,
+// blue bottom-left (same arrangement as Ludo Star).
+// ============================================================
+
+import type { Color } from './types'
+
+export const BOARD_SIZE = 15
+
+export interface Cell {
+  r: number
+  c: number
+}
+
+/** The 52-cell clockwise main track. Index 0 = (6,0). */
+export const TRACK: Cell[] = [
+  // Q1: left arm top row -> top-left column -> top middle (idx 0-12)
+  { r: 6, c: 0 }, { r: 6, c: 1 }, { r: 6, c: 2 }, { r: 6, c: 3 }, { r: 6, c: 4 }, { r: 6, c: 5 },
+  { r: 5, c: 6 }, { r: 4, c: 6 }, { r: 3, c: 6 }, { r: 2, c: 6 }, { r: 1, c: 6 }, { r: 0, c: 6 },
+  { r: 0, c: 7 },
+  // Q2: top-right column -> right arm top row -> right middle (idx 13-25)
+  { r: 0, c: 8 }, { r: 1, c: 8 }, { r: 2, c: 8 }, { r: 3, c: 8 }, { r: 4, c: 8 }, { r: 5, c: 8 },
+  { r: 6, c: 9 }, { r: 6, c: 10 }, { r: 6, c: 11 }, { r: 6, c: 12 }, { r: 6, c: 13 }, { r: 6, c: 14 },
+  { r: 7, c: 14 },
+  // Q3: right arm bottom row -> bottom-right column -> bottom middle (idx 26-38)
+  { r: 8, c: 14 }, { r: 8, c: 13 }, { r: 8, c: 12 }, { r: 8, c: 11 }, { r: 8, c: 10 }, { r: 8, c: 9 },
+  { r: 9, c: 8 }, { r: 10, c: 8 }, { r: 11, c: 8 }, { r: 12, c: 8 }, { r: 13, c: 8 }, { r: 14, c: 8 },
+  { r: 14, c: 7 },
+  // Q4: bottom-left column -> left arm bottom row -> left middle (idx 39-51)
+  { r: 14, c: 6 }, { r: 13, c: 6 }, { r: 12, c: 6 }, { r: 11, c: 6 }, { r: 10, c: 6 }, { r: 9, c: 6 },
+  { r: 8, c: 5 }, { r: 8, c: 4 }, { r: 8, c: 3 }, { r: 8, c: 2 }, { r: 8, c: 1 }, { r: 8, c: 0 },
+  { r: 7, c: 0 },
+]
+
+export const PLAYERS_ORDER: Color[] = ['red', 'green', 'yellow', 'blue']
+
+/** Absolute loop index of each color's start cell. Evenly spaced by 13. */
+export const START_IDX: Record<Color, number> = {
+  red: 1,    // (6,1)
+  green: 14, // (1,8)
+  yellow: 27, // (8,13)
+  blue: 40,  // (13,6)
+}
+
+/** Star (safe) cells: exactly 8 steps ahead of each start. */
+export const STAR_IDX: number[] = [9, 22, 35, 48]
+
+export const SAFE_IDX: Set<number> = new Set([...Object.values(START_IDX), ...STAR_IDX])
+
+/** Last track cell of each color before entering its home column. */
+export const LAST_TRACK_IDX: Record<Color, number> = {
+  red: 51,    // (7,0)
+  green: 12,  // (0,7)
+  yellow: 25, // (7,14)
+  blue: 38,   // (14,7)
+}
+
+/** Home column cells (5) per color, in travel order. */
+export const HOME_PATH: Record<Color, Cell[]> = {
+  red: [{ r: 7, c: 1 }, { r: 7, c: 2 }, { r: 7, c: 3 }, { r: 7, c: 4 }, { r: 7, c: 5 }],
+  green: [{ r: 1, c: 7 }, { r: 2, c: 7 }, { r: 3, c: 7 }, { r: 4, c: 7 }, { r: 5, c: 7 }],
+  yellow: [{ r: 7, c: 13 }, { r: 7, c: 12 }, { r: 7, c: 11 }, { r: 7, c: 10 }, { r: 7, c: 9 }],
+  blue: [{ r: 13, c: 7 }, { r: 12, c: 7 }, { r: 11, c: 7 }, { r: 10, c: 7 }, { r: 9, c: 7 }],
+}
+
+/** Total pips needed from start cell to finish: 50 track + 5 home = 55 steps, finish at 56. */
+export const FINISH_PROGRESS = 56
+
+/** Yard base positions (top-left corner cell of the 6x6 yard) per color. */
+export const YARD_BASE: Record<Color, Cell> = {
+  red: { r: 0, c: 0 },
+  green: { r: 0, c: 9 },
+  yellow: { r: 9, c: 9 },
+  blue: { r: 9, c: 0 },
+}
+
+/** Token resting slots inside each yard (cell centers, cell units). */
+export const YARD_SLOTS: Array<{ r: number; c: number }> = [
+  { r: 1.6, c: 1.6 },
+  { r: 1.6, c: 3.4 },
+  { r: 3.4, c: 1.6 },
+  { r: 3.4, c: 3.4 },
+]
+
+/** Finished-token slots inside the center triangle per color (cell units). */
+export const FINISH_SLOTS: Record<Color, Array<{ r: number; c: number }>> = {
+  red: [
+    { r: 7.5, c: 6.42 }, { r: 6.9, c: 6.75 }, { r: 8.1, c: 6.75 }, { r: 7.5, c: 6.95 },
+  ],
+  green: [
+    { r: 6.42, c: 7.5 }, { r: 6.75, c: 6.9 }, { r: 6.75, c: 8.1 }, { r: 6.95, c: 7.5 },
+  ],
+  yellow: [
+    { r: 7.5, c: 8.58 }, { r: 6.9, c: 8.25 }, { r: 8.1, c: 8.25 }, { r: 6.95, c: 7.5 },
+  ].reverse(),
+  blue: [
+    { r: 8.58, c: 7.5 }, { r: 8.25, c: 6.9 }, { r: 8.25, c: 8.1 }, { r: 7.5, c: 7.05 },
+  ].reverse(),
+}
+
+/** Convert a track index into the absolute index for a color. */
+export function trackIdxFor(color: Color, progressFromStart: number): number {
+  return (START_IDX[color] + progressFromStart) % 52
+}
+
+/** Screen position (percent of board) for a token given its location. */
+export function tokenScreenPos(
+  color: Color,
+  tokenId: number,
+  location: string,
+  trackIdx: number,
+  homeStep: number,
+  /** index of this token within tokens sharing the cell (-1 if not stacked) */
+  stackIndex: number = -1,
+  /** how many tokens share the cell */
+  stackSize: number = 1
+): { x: number; y: number } {
+  let pos: { r: number; c: number }
+  if (location === 'yard') {
+    const base = YARD_BASE[color]
+    const slot = YARD_SLOTS[tokenId % 4]
+    pos = { r: base.r + slot.r, c: base.c + slot.c }
+  } else if (location === 'track') {
+    const cell = TRACK[trackIdx]
+    pos = { r: cell.r + 0.5, c: cell.c + 0.5 }
+  } else if (location === 'home') {
+    const cell = HOME_PATH[color][Math.min(homeStep, 5) - 1]
+    pos = { r: cell.r + 0.5, c: cell.c + 0.5 }
+  } else {
+    const slots = FINISH_SLOTS[color]
+    const slot = slots[tokenId % slots.length]
+    pos = slot
+  }
+  // stacking offset: fan out tokens sharing one cell
+  if (stackSize > 1 && location === 'track') {
+    const i = Math.max(0, stackIndex)
+    const n = stackSize
+    if (n === 2) {
+      pos = { r: pos.r + (i === 0 ? -0.16 : 0.16), c: pos.c + (i === 0 ? -0.16 : 0.16) }
+    } else {
+      const angle = (i / n) * Math.PI * 2
+      pos = { r: pos.r + 0.18 * Math.sin(angle), c: pos.c + 0.18 * Math.cos(angle) }
+    }
+  }
+  return {
+    x: ((pos.c + 0) / BOARD_SIZE) * 100,
+    y: ((pos.r + 0) / BOARD_SIZE) * 100,
+  }
+}
+
+export const COLOR_HEX: Record<Color, { main: string; dark: string; light: string; glow: string }> = {
+  red: { main: '#ef4444', dark: '#b91c1c', light: '#fca5a5', glow: 'rgba(239,68,68,0.55)' },
+  green: { main: '#22c55e', dark: '#15803d', light: '#86efac', glow: 'rgba(34,197,94,0.55)' },
+  yellow: { main: '#facc15', dark: '#a16207', light: '#fde68a', glow: 'rgba(250,204,21,0.55)' },
+  blue: { main: '#3b82f6', dark: '#1d4ed8', light: '#93c5fd', glow: 'rgba(59,130,246,0.55)' },
+}
