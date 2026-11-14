@@ -1,0 +1,112 @@
+/* Ludo Star 2017 theme: wooden menu, felt table, gold trim */
+/* ============================================================
+   LUDO STAR 2017 theme: wooden menu, felt table, gold trim
+   ============================================================ */
+
+body {
+  background: #140b04;
+}
+
+.ls-font {
+  font-family: var(--font-lilita), "Arial Rounded MT Bold", "Baloo 2", ui-rounded, system-ui, sans-serif;
+}
+
+/* wooden table backdrop (menu) */
+.ls-wood {
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(255, 193, 110, 0.16) 0%, transparent 55%),
+    repeating-linear-gradient(92deg, rgba(56, 26, 6, 0.11) 0px, rgba(56, 26, 6, 0.11) 2px, transparent 2px, transparent 17px),
+    repeating-linear-gradient(88deg, rgba(255, 220, 160, 0.05) 0px, rgba(255, 220, 160, 0.05) 1px, transparent 1px, transparent 24px),
+    linear-gradient(180deg, #9c6429 0%, #7c4c1f 48%, #5c3817 100%);
+}
+
+/* green casino felt backdrop (game) */
+.ls-felt {
+  background: radial-gradient(130% 110% at 50% 38%, #1a5f41 0%, #10452f 48%, #08291c 82%, #041a12 100%);
+}
+
+.ls-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  background: radial-gradient(120% 120% at 50% 45%, transparent 52%, rgba(0, 0, 0, 0.52) 100%);
+}
+
+/* dark wooden panel */
+.ls-panel {
+  background: linear-gradient(180deg, rgba(88, 53, 24, 0.94), rgba(60, 34, 14, 0.94));
+  border: 2px solid #c99e5f;
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.45),
+    inset 0 2px 0 rgba(255, 220, 170, 0.25),
+    inset 0 -6px 14px rgba(0, 0, 0, 0.3);
+}
+
+/* big carved wooden button */
+.ls-btn {
+  position: relative;
+  background: linear-gradient(180deg, #e59b4b 0%, #cd7d2f 52%, #a35c1e 100%);
+  border: 3px solid #f6dfae;
+  box-shadow:
+    0 5px 0 #7a4517,
+    0 10px 18px rgba(0, 0, 0, 0.4),
+    inset 0 2px 0 rgba(255, 235, 190, 0.55);
+  text-shadow: 0 2px 0 rgba(90, 40, 5, 0.6);
+  transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s ease;
+}
+.ls-btn:hover {
+  filter: brightness(1.07);
+}
+.ls-btn:active {
+  transform: translateY(4px);
+  box-shadow:
+    0 1px 0 #7a4517,
+    0 4px 8px rgba(0, 0, 0, 0.35),
+    inset 0 2px 0 rgba(255, 235, 190, 0.4);
+}
+.ls-btn:disabled {
+  filter: grayscale(0.4) brightness(0.7);
+  transform: none;
+}
+
+/* green button (online / play) */
+.ls-btn-green {
+  background: linear-gradient(180deg, #6cc257 0%, #47a136 52%, #327c25 100%);
+  border-color: #dcf3c8;
+  box-shadow:
+    0 5px 0 #23531b,
+    0 10px 18px rgba(0, 0, 0, 0.4),
+    inset 0 2px 0 rgba(240, 255, 220, 0.5);
+  text-shadow: 0 2px 0 rgba(20, 70, 10, 0.55);
+}
+.ls-btn-green:active {
+  box-shadow: 0 1px 0 #23531b, 0 4px 8px rgba(0, 0, 0, 0.35);
+}
+
+/* small inset chip (stakes, options) */
+.ls-chip {
+  background: linear-gradient(180deg, #5f3a1c, #422711);
+  border: 1.5px solid #b98a52;
+  box-shadow: inset 0 1px 0 rgba(255, 220, 170, 0.18);
+}
+
+/* logo text */
+.ls-logo-ludo {
+  color: #fff7e0;
+  -webkit-text-stroke: 2.5px #71330d;
+  text-shadow: 0 4px 0 #71330d, 0 9px 18px rgba(0, 0, 0, 0.55);
+  letter-spacing: 0.03em;
+}
+.ls-logo-star {
+  color: transparent;
+  background: linear-gradient(180deg, #fff3b0 0%, #ffd23e 45%, #f0a10c 88%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: drop-shadow(0 2px 0 #a05a08) drop-shadow(0 6px 9px rgba(0, 0, 0, 0.5));
+  letter-spacing: 0.18em;
+}
+
+.ls-name-shadow {
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
+}

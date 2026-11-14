@@ -1,6 +1,9 @@
 'use client'
 
-// Glossy Ludo Star style dice with roll animation
+// ============================================================
+// Ludo Star dice: glossy white die faces rendered in the CENTER
+// of the board (on the current player's triangle), tap to roll.
+// ============================================================
 
 import { motion } from 'framer-motion'
 import type { Color } from '@/lib/ludo/types'
@@ -8,159 +11,194 @@ import { COLOR_HEX } from '@/lib/ludo/board'
 
 const PIP: Record<number, Array<[number, number]>> = {
   1: [[50, 50]],
-  2: [[28, 28], [72, 72]],
-  3: [[26, 26], [50, 50], [74, 74]],
-  4: [[28, 28], [72, 28], [28, 72], [72, 72]],
-  5: [[28, 28], [72, 28], [50, 50], [28, 72], [72, 72]],
-  6: [[28, 25], [72, 25], [28, 50], [72, 50], [28, 75], [72, 75]],
+  2: [[27, 27], [73, 73]],
+  3: [[25, 25], [50, 50], [75, 75]],
+  4: [[27, 27], [73, 27], [27, 73], [73, 73]],
+  5: [[27, 27], [73, 27], [50, 50], [27, 73], [73, 73]],
+  6: [[27, 24], [73, 24], [27, 50], [73, 50], [27, 76], [73, 76]],
 }
 
-export function Die({
+export function DieFace({
   value,
-  color,
-  rolling,
-  used,
-  selected,
-  onClick,
-  size = 64,
+  used = false,
+  className = '',
+  style,
 }: {
   value: number
-  color: Color
-  rolling: boolean
-  used: boolean
-  selected?: boolean
-  onClick?: () => void
-  size?: number
+  used?: boolean
+  className?: string
+  style?: React.CSSProperties
 }) {
-  const c = COLOR_HEX[color]
   return (
-    <motion.button
-      onClick={onClick}
-      disabled={!onClick}
-      animate={
-        rolling
-          ? { rotate: [0, 90, 180, 270, 360, 450], scale: [1, 1.12, 0.95, 1.08, 1, 1] }
-          : selected
-            ? { scale: 1.1 }
-            : { scale: 1 }
-      }
-      transition={rolling ? { duration: 0.65, ease: 'easeInOut' } : { type: 'spring', stiffness: 300, damping: 16 }}
-      className="relative rounded-2xl"
+    <div
+      className={`relative h-full w-full rounded-[24%] ${className}`}
       style={{
-        width: size,
-        height: size,
+        ...style,
         background: used
-          ? 'linear-gradient(145deg,#475569,#334155)'
-          : `linear-gradient(145deg, #ffffff, ${c.light})`,
-        border: `3px solid ${used ? '#334155' : selected ? c.main : '#e2e8f0'}`,
+          ? 'linear-gradient(145deg,#a6b1c2,#7c8ba1)'
+          : 'linear-gradient(150deg,#ffffff 20%,#f2ecdc 85%)',
+        border: '2px solid #cdc4ae',
         boxShadow: used
-          ? 'inset 0 2px 6px rgba(0,0,0,0.4)'
-          : `0 6px 14px rgba(0,0,0,0.4), 0 0 12px ${selected ? c.glow : 'transparent'}, inset 0 -4px 8px rgba(0,0,0,0.08)`,
-        opacity: used ? 0.45 : 1,
+          ? 'inset 0 3px 9px rgba(0,0,0,0.4)'
+          : '0 4px 10px rgba(0,0,0,0.45), inset 0 -3px 7px rgba(0,0,0,0.12), inset 0 2px 0 rgba(255,255,255,0.95)',
+        opacity: used ? 0.5 : 1,
       }}
-      aria-label={`Dice showing ${value}${used ? ' (used)' : ''}`}
     >
-      {rolling ? (
-        <div className="absolute inset-0 grid place-items-center">
-          <div className="w-2/5 h-2/5 rounded-full" style={{ background: c.main, filter: 'blur(2px)', opacity: 0.7 }} />
-        </div>
-      ) : (
-        <>
-          {(PIP[value] ?? PIP[1]).map(([x, y], i) => (
-            <span
-              key={i}
-              className="absolute rounded-full"
-              style={{
-                left: `${x}%`,
-                top: `${y}%`,
-                width: '19%',
-                height: '19%',
-                transform: 'translate(-50%,-50%)',
-                background: used ? '#94a3b8' : '#1e293b',
-                boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.5)',
-              }}
-            />
-          ))}
-        </>
-      )}
-    </motion.button>
+      {(PIP[value] ?? PIP[1]).map(([x, y], i) => (
+        <span
+          key={i}
+          className="absolute rounded-full"
+          style={{
+            left: `${x}%`,
+            top: `${y}%`,
+            width: '20%',
+            height: '20%',
+            transform: 'translate(-50%,-50%)',
+            background: used ? '#8fa0b5' : '#1d2433',
+            boxShadow: 'inset 0 1.5px 2px rgba(0,0,0,0.55)',
+          }}
+        />
+      ))}
+    </div>
   )
 }
 
-export default function DiceTray({
-  values,
-  color,
-  rolling,
-  usedDice,
-  selectedDie,
-  onSelectDie,
-  onRoll,
-  canRoll,
-  playerName,
-  isYou,
-}: {
+export interface DiceCenterProps {
   values: number[]
   color: Color
   rolling: boolean
+  canRoll: boolean
+  isYou: boolean
+  playerName: string
   usedDice: number[]
   selectedDie: number
   onSelectDie?: (i: number) => void
   onRoll?: () => void
-  canRoll: boolean
-  playerName: string
-  isYou: boolean
-}) {
+}
+
+export default function DiceCenter({
+  values,
+  color,
+  rolling,
+  canRoll,
+  isYou,
+  playerName,
+  usedDice,
+  selectedDie,
+  onSelectDie,
+  onRoll,
+}: DiceCenterProps) {
   const c = COLOR_HEX[color]
+  const showTap = canRoll && values.length === 0 && !rolling
+  const twoDice = values.length > 1
+
   return (
-    <div className="flex flex-col items-center gap-1.5">
+    <div
+      className="pointer-events-none absolute z-30"
+      style={{ left: '39.5%', top: '39.5%', width: '21%', height: '21%' }}
+      aria-label={showTap ? 'Roll dice' : undefined}
+    >
+      {/* soft plate shadow under the dice */}
       <div
-        className={`flex items-center gap-3 rounded-3xl px-5 py-3 transition-shadow ${canRoll ? 'cursor-pointer' : ''}`}
-        style={{
-          background: 'rgba(15,23,42,0.72)',
-          border: `2px solid ${canRoll ? c.main : 'rgba(71,85,105,0.5)'}`,
-          boxShadow: canRoll ? `0 0 22px ${c.glow}` : '0 4px 12px rgba(0,0,0,0.3)',
-          backdropFilter: 'blur(6px)',
-        }}
-        onClick={canRoll ? onRoll : undefined}
-        role="button"
-        aria-disabled={!canRoll}
-        aria-label={canRoll ? 'Roll dice' : `Waiting for ${playerName}`}
-      >
-        {values.length === 0 && !rolling ? (
-          <div className="flex flex-col items-center px-1">
-            <span className="text-xs font-semibold" style={{ color: c.light }}>
-              {isYou ? 'Your turn' : playerName}
-            </span>
-            <span className="text-[11px] text-slate-400">{isYou ? 'Tap to roll' : 'rolling...'}</span>
-          </div>
-        ) : (
-          values.map((v, i) => (
-            <Die
-              key={i}
-              value={v}
-              color={color}
-              rolling={rolling}
-              used={usedDice.includes(i)}
-              selected={!rolling && !usedDice.includes(i) && i === selectedDie && values.length > 1}
-              onClick={
-                !rolling && !usedDice.includes(i) && values.length > 1 && onSelectDie
-                  ? () => onSelectDie(i)
-                  : undefined
-              }
-            />
-          ))
-        )}
-        {canRoll && values.length === 0 && (
-          <motion.span
-            animate={{ scale: [1, 1.15, 1] }}
-            transition={{ repeat: Infinity, duration: 1.1 }}
-            className="text-2xl"
-            style={{ color: c.main }}
+        className="absolute inset-[4%] rounded-full"
+        style={{ background: 'radial-gradient(circle, rgba(0,0,0,0.22), transparent 68%)' }}
+      />
+
+      {rolling ? (
+        <div className="absolute inset-0 grid place-items-center">
+          <motion.div
+            className="h-[80%] w-[80%]"
+            animate={{
+              rotate: [0, 90, 200, 320, 430],
+              scale: [1, 1.18, 0.9, 1.12, 1],
+              x: [0, -6, 6, -3, 0],
+              y: [0, 3, -4, 2, 0],
+            }}
+            transition={{ repeat: Infinity, duration: 0.55, ease: 'easeInOut' }}
           >
-            🎲
-          </motion.span>
-        )}
-      </div>
+            <DieFace value={3} />
+          </motion.div>
+        </div>
+      ) : twoDice ? (
+        /* Master mode: two dice side by side */
+        <div className="absolute inset-0 flex items-center justify-center gap-[7%] px-[4%]">
+          {values.map((v, i) => (
+            <motion.button
+              key={i}
+              className={`pointer-events-auto relative aspect-square h-auto w-[40%] ${
+                !rolling && !usedDice.includes(i) && onSelectDie ? 'cursor-pointer' : ''
+              }`}
+              onClick={!rolling && !usedDice.includes(i) && onSelectDie ? () => onSelectDie(i) : undefined}
+              animate={
+                !rolling && !usedDice.includes(i) && selectedDie === i
+                  ? { y: -7, scale: 1.14 }
+                  : { y: 0, scale: 1 }
+              }
+              transition={{ type: 'spring', stiffness: 320, damping: 15 }}
+              aria-label={`Die ${i + 1} showing ${v}${usedDice.includes(i) ? ' (used)' : ''}`}
+            >
+              <DieFace value={v} used={usedDice.includes(i)} />
+              {!rolling && !usedDice.includes(i) && selectedDie === i && (
+                <span
+                  className="absolute -inset-[16%] rounded-[30%] border-[3px] border-white/90"
+                  style={{ boxShadow: `0 0 14px ${c.glow}` }}
+                />
+              )}
+            </motion.button>
+          ))}
+        </div>
+      ) : (
+        /* single die: tap-to-roll or last value */
+        <div className="absolute inset-0 grid place-items-center">
+          <motion.button
+            className={`relative h-[80%] w-[80%] ${showTap ? 'pointer-events-auto cursor-pointer' : ''}`}
+            onClick={showTap ? onRoll : undefined}
+            animate={
+              showTap
+                ? { scale: [1, 1.12, 1] }
+                : { scale: 1, opacity: values.length === 0 ? 0.55 : 1 }
+            }
+            transition={
+              showTap
+                ? { repeat: Infinity, duration: 0.9, ease: 'easeInOut' }
+                : { duration: 0.2 }
+            }
+            whileTap={showTap ? { scale: 0.88 } : undefined}
+            role={showTap ? 'button' : undefined}
+            aria-disabled={!showTap}
+            aria-label={
+              showTap
+                ? 'Roll dice'
+                : values.length > 0
+                  ? `Dice showing ${values[0]}`
+                  : `Waiting for ${playerName}`
+            }
+          >
+            <DieFace value={values[0] ?? 6} used={usedDice.includes(0)} />
+            {showTap && (
+              <motion.span
+                className="ls-font absolute -top-7 left-1/2 -translate-x-1/2 rounded-full px-3 py-0.5 text-sm leading-tight text-white"
+                style={{
+                  background: 'linear-gradient(180deg,#ffcf4d,#f0a10c)',
+                  border: '2px solid #fff3c9',
+                  textShadow: '0 1px 0 rgba(120,60,0,0.65)',
+                  boxShadow: '0 3px 6px rgba(0,0,0,0.45)',
+                }}
+                animate={{ y: [0, -4, 0] }}
+                transition={{ repeat: Infinity, duration: 0.9 }}
+              >
+                TAP
+              </motion.span>
+            )}
+            {showTap && isYou && (
+              <span
+                className="absolute -inset-[22%] rounded-[32%]"
+                style={{ boxShadow: `0 0 22px 4px ${c.glow}` }}
+              />
+            )}
+          </motion.button>
+        </div>
+      )}
     </div>
   )
 }

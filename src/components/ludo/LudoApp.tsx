@@ -17,7 +17,7 @@ export default function LudoApp() {
   }, [hydrate])
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(ellipse_at_top,#1e293b_0%,#0f172a_45%,#020617_100%)] text-slate-100">
+    <main className="min-h-screen text-slate-100">
       {view === 'menu' ? <MenuScreen /> : <GameScreen />}
     </main>
   )

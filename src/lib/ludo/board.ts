@@ -151,8 +151,8 @@ export function tokenScreenPos(
 }
 
 export const COLOR_HEX: Record<Color, { main: string; dark: string; light: string; glow: string }> = {
-  red: { main: '#ef4444', dark: '#b91c1c', light: '#fca5a5', glow: 'rgba(239,68,68,0.55)' },
-  green: { main: '#22c55e', dark: '#15803d', light: '#86efac', glow: 'rgba(34,197,94,0.55)' },
-  yellow: { main: '#facc15', dark: '#a16207', light: '#fde68a', glow: 'rgba(250,204,21,0.55)' },
-  blue: { main: '#3b82f6', dark: '#1d4ed8', light: '#93c5fd', glow: 'rgba(59,130,246,0.55)' },
+  red: { main: '#e5453c', dark: '#a5231d', light: '#ff9d92', glow: 'rgba(229,69,60,0.6)' },
+  green: { main: '#46a848', dark: '#2b6e2f', light: '#a4dd9f', glow: 'rgba(70,168,72,0.6)' },
+  yellow: { main: '#f7c331', dark: '#b7850f', light: '#ffefad', glow: 'rgba(247,195,49,0.6)' },
+  blue: { main: '#2a8ee0', dark: '#155a9c', light: '#9ecdf7', glow: 'rgba(42,142,224,0.6)' },
 }
