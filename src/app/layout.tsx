@@ -25,19 +25,19 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#0f172a",
+  themeColor: "#070a18",
 };
 
 export const metadata: Metadata = {
-  title: "Ludo Star - Play Classic Ludo Online",
-  description: "Ludo Star style multiplayer Ludo: play vs Computer, Pass & Play offline, or Online with bets, emotes and chat. Web now, mobile later.",
-  keywords: ["Ludo", "Ludo Star", "board game", "multiplayer", "dice game"],
+  title: "Ludo Royale — Premium Multiplayer Ludo",
+  description: "Ludo Royale: premium multiplayer Ludo — play vs Computer, Pass & Play offline, or Online with bets, emotes and chat. Web now, mobile later.",
+  keywords: ["Ludo", "Ludo Royale", "board game", "multiplayer", "dice game"],
   icons: {
     icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎲</text></svg>",
   },
   openGraph: {
-    title: "Ludo Star",
-    description: "Classic Ludo with bets, emotes and online rooms",
+    title: "Ludo Royale",
+    description: "Premium Ludo with bets, emotes and online rooms",
     type: "website",
   },
 };

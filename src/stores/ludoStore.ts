@@ -23,6 +23,7 @@ export interface Profile {
   name: string
   avatar: string
   coins: number
+  gems: number
   wins: number
   losses: number
 }
@@ -83,7 +84,12 @@ export interface LobbyInfo {
   seats: number
 }
 
-type View = 'menu' | 'game'
+export interface DailyState {
+  lastClaim: string
+  streak: number
+}
+
+type View = 'menu' | 'lobby' | 'game'
 type MenuTab = 'computer' | 'pass' | 'online'
 
 interface LudoStore {
@@ -94,8 +100,11 @@ interface LudoStore {
   hydrate: () => void
   updateProfile: (patch: Partial<Profile>) => void
   addCoins: (n: number) => void
+  addGems: (n: number) => void
   refillCoins: () => void
   toggleSound: () => void
+  daily: DailyState | null
+  claimDaily: () => void
 
   // navigation
   view: View
@@ -161,18 +170,61 @@ function uid() {
   return Math.random().toString(36).slice(2, 10)
 }
 
+const DEFAULT_PROFILE: Profile = {
+  id: '',
+  name: 'Player',
+  avatar: AVATARS[0],
+  coins: STARTING_COINS,
+  gems: 20,
+  wins: 0,
+  losses: 0,
+}
+
 function loadProfile(): Profile {
-  if (typeof window === 'undefined') {
-    return { id: 'ssr', name: 'Player', avatar: AVATARS[0], coins: STARTING_COINS, wins: 0, losses: 0 }
-  }
+  if (typeof window === 'undefined') return { ...DEFAULT_PROFILE, id: 'ssr' }
   try {
     const raw = localStorage.getItem('ludo.profile.v1')
-    if (raw) return JSON.parse(raw) as Profile
+    if (raw) {
+      const p = JSON.parse(raw) as Partial<Profile>
+      return { ...DEFAULT_PROFILE, ...p, gems: typeof p.gems === 'number' ? p.gems : 20 }
+    }
   } catch {
     /* ignore */
   }
-  return { id: uid(), name: 'Player' + Math.floor(100 + Math.random() * 900), avatar: AVATARS[Math.floor(Math.random() * AVATARS.length)], coins: STARTING_COINS, wins: 0, losses: 0 }
+  return {
+    ...DEFAULT_PROFILE,
+    id: uid(),
+    name: 'Player' + Math.floor(100 + Math.random() * 900),
+    avatar: AVATARS[Math.floor(Math.random() * AVATARS.length)],
+  }
 }
+
+function loadDaily(): DailyState | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = localStorage.getItem('ludo.daily.v1')
+    if (raw) return JSON.parse(raw) as DailyState
+  } catch {
+    /* ignore */
+  }
+  return null
+}
+
+function saveDaily(d: DailyState) {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('ludo.daily.v1', JSON.stringify(d))
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+function todayStr(offsetDays = 0) {
+  return new Date(Date.now() + offsetDays * 86400000).toLocaleDateString('en-CA')
+}
+
+export const DAILY_REWARDS = [200, 300, 500, 750, 1000, 1500, 2500]
 
 function saveProfile(p: Profile) {
   if (typeof window !== 'undefined') {
@@ -260,7 +312,7 @@ export const useLudo = create<LudoStore>((set, get) => {
     if (youWon) {
       get().addCoins(pot)
       sfx.win()
-      set((s) => ({ profile: { ...s.profile, wins: s.profile.wins + 1 } }))
+      set((s) => ({ profile: { ...s.profile, wins: s.profile.wins + 1, gems: s.profile.gems + 2 } }))
       setTimeout(() => get().updateProfile({}), 0)
     } else {
       sfx.lose()
@@ -411,10 +463,15 @@ export const useLudo = create<LudoStore>((set, get) => {
       set((s) => (s.onlineStatus === 'playing' ? { onlineStatus: 'playing' } : { onlineStatus: 'idle' }))
     })
     online.on('lobby:created', ({ code }: { code: string }) => {
-      set({ onlineStatus: 'lobby' })
+      set({ onlineStatus: 'lobby', view: 'lobby' })
     })
     online.on('lobby:update', ({ room }: { room: LobbyInfo }) => {
-      set({ onlineStatus: 'lobby', lobby: room, onlineError: '' })
+      set((s) => ({
+        onlineStatus: 'lobby',
+        lobby: room,
+        onlineError: '',
+        view: s.view === 'game' ? 'game' : 'lobby',
+      }))
     })
     online.on('lobby:error', ({ message }: { message: string }) => {
       set({ onlineError: message })
@@ -510,7 +567,7 @@ export const useLudo = create<LudoStore>((set, get) => {
       if (youWon) {
         get().addCoins(pot)
         sfx.win()
-        set((s) => ({ profile: { ...s.profile, wins: s.profile.wins + 1 } }))
+        set((s) => ({ profile: { ...s.profile, wins: s.profile.wins + 1, gems: s.profile.gems + 2 } }))
       } else {
         sfx.lose()
         set((s) => ({ profile: { ...s.profile, losses: s.profile.losses + 1 } }))
@@ -603,12 +660,13 @@ export const useLudo = create<LudoStore>((set, get) => {
   }
 
   return {
-    profile: { id: '', name: 'Player', avatar: AVATARS[0], coins: STARTING_COINS, wins: 0, losses: 0 },
+    profile: { ...DEFAULT_PROFILE },
     hydrated: false,
     soundOn: true,
+    daily: null,
     hydrate: () => {
       const p = loadProfile()
-      set({ profile: p, hydrated: true })
+      set({ profile: p, daily: loadDaily(), hydrated: true })
     },
     updateProfile: (patch) => {
       set((s) => {
@@ -623,6 +681,24 @@ export const useLudo = create<LudoStore>((set, get) => {
         saveProfile(p)
         return { profile: p }
       })
+    },
+    addGems: (n) => {
+      set((s) => {
+        const p = { ...s.profile, gems: Math.max(0, s.profile.gems + n) }
+        saveProfile(p)
+        return { profile: p }
+      })
+    },
+    claimDaily: () => {
+      const today = todayStr()
+      const d = get().daily
+      if (d?.lastClaim === today) return
+      const streak = d?.lastClaim === todayStr(-1) ? Math.min(7, d.streak + 1) : 1
+      const next = { lastClaim: today, streak }
+      set({ daily: next })
+      saveDaily(next)
+      get().addCoins(DAILY_REWARDS[streak - 1])
+      sfx.coin()
     },
     refillCoins: () => {
       get().addCoins(FREE_REFILL)
@@ -835,6 +911,11 @@ export const useLudo = create<LudoStore>((set, get) => {
       set({ onlineStatus: 'connecting', onlineError: '' })
       wireOnline()
       online.connect()
+      // socket may already be connected (e.g. returning from a finished game):
+      // 'connect' will not re-fire, so resolve the status immediately.
+      if (online.connected()) {
+        set((s) => ({ onlineStatus: s.lobby ? 'lobby' : 'connected' }))
+      }
     },
     onlineCreate: ({ stake, mode, seats, botFill }) => {
       const p = get().profile
@@ -857,7 +938,7 @@ export const useLudo = create<LudoStore>((set, get) => {
     },
     onlineLeave: () => {
       online.emit('lobby:leave')
-      set({ onlineStatus: 'idle', lobby: null })
+      set({ onlineStatus: 'idle', lobby: null, view: 'menu' })
     },
     onlineRematch: () => {
       online.emit('game:rematch')

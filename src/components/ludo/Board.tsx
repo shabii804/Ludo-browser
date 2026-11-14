@@ -1,9 +1,10 @@
 'use client'
 
 // ============================================================
-// Ludo Board - Ludo Star 2017 style:
-// wooden frame, colored yards with white slot panels,
+// Ludo Board — premium navy/gold framed board:
+// colored yards with glossy slot panels, crisp track cells,
 // 3D pawn tokens, star safe cells, dice in the center.
+// Geometry & interaction logic unchanged.
 // ============================================================
 
 import { useMemo } from 'react'
@@ -41,8 +42,9 @@ interface BoardProps {
 
 const pct = (v: number) => `${(v / BOARD_SIZE) * 100}%`
 
-const CELL_BORDER = '#cfc4ab'
-const CELL_BG = '#fffdf4'
+const CELL_BORDER = '#c9cdf2'
+const CELL_BG = 'linear-gradient(160deg, #ffffff 0%, #eef1ff 100%)'
+const SAFE_BG = 'linear-gradient(160deg, #f2f4ff 0%, #e3e8fb 100%)'
 
 function cellStyle(isSafe: boolean, isStar: boolean, owner: Color | null) {
   if (owner) {
@@ -50,10 +52,11 @@ function cellStyle(isSafe: boolean, isStar: boolean, owner: Color | null) {
     return {
       background: `linear-gradient(150deg, ${c.light} -18%, ${c.main} 55%, ${c.dark} 130%)`,
       border: `1px solid ${c.dark}`,
+      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35)',
     }
   }
   if (isSafe && !isStar) {
-    return { background: '#f3efe1', border: `1px solid ${CELL_BORDER}` }
+    return { background: SAFE_BG, border: `1px solid ${CELL_BORDER}` }
   }
   return { background: CELL_BG, border: `1px solid ${CELL_BORDER}` }
 }
@@ -115,25 +118,26 @@ export default function Board({
   }, [game])
 
   return (
-    <div className="relative w-full aspect-square select-none" style={{ maxWidth: 'min(92vw, 60vh)', margin: '0 auto' }}>
-      {/* carved wooden frame */}
+    <div className="relative w-full aspect-square select-none" style={{ maxWidth: 'min(92vw, 58vh)', margin: '0 auto' }}>
+      {/* deep navy frame with purple glow */}
       <div
         className="absolute inset-0 rounded-[6%]"
         style={{
-          background: 'linear-gradient(155deg, #96662f 0%, #6d4420 45%, #4e2d13 100%)',
-          boxShadow: '0 24px 55px rgba(0,0,0,0.65), inset 0 2px 0 rgba(255,214,150,0.4), inset 0 -4px 10px rgba(0,0,0,0.4)',
+          background: 'linear-gradient(155deg, #33386e 0%, #1d2148 45%, #10122e 100%)',
+          boxShadow:
+            '0 24px 55px rgba(2,4,16,0.7), 0 0 40px rgba(124,58,237,0.22), inset 0 2px 0 rgba(196,181,253,0.35), inset 0 -4px 10px rgba(0,0,0,0.4)',
         }}
       />
       {/* gold trim ring */}
       <div
         className="absolute inset-[1.8%] rounded-[5%]"
         style={{
-          background: 'linear-gradient(180deg, #e5b96b, #b9883f)',
-          boxShadow: 'inset 0 1px 0 rgba(255,240,200,0.7), 0 2px 6px rgba(0,0,0,0.35)',
+          background: 'linear-gradient(180deg, #f3d98b, #d9a636)',
+          boxShadow: 'inset 0 1px 0 rgba(255,240,200,0.8), 0 2px 6px rgba(0,0,0,0.35)',
         }}
       />
       {/* board interior */}
-      <div className="absolute inset-[3.4%] overflow-hidden rounded-[4%]" style={{ background: '#f7f3e6' }}>
+      <div className="absolute inset-[3.4%] overflow-hidden rounded-[4%]" style={{ background: '#f2f4ff' }}>
         <div className="relative h-full w-full">
           {/* yards */}
           {(Object.keys(YARD_BASE) as Color[]).map((color) => {
@@ -152,17 +156,17 @@ export default function Board({
                   background: `linear-gradient(150deg, ${c.light} -30%, ${c.main} 45%, ${c.dark} 125%)`,
                   borderRadius: '9%',
                   boxShadow: isTurn
-                    ? `inset 0 0 0 3px rgba(255,255,255,0.9), 0 0 24px 5px ${c.glow}`
+                    ? `inset 0 0 0 3px rgba(255,255,255,0.95), 0 0 26px 6px ${c.glow}`
                     : 'inset 0 -6px 12px rgba(0,0,0,0.28), inset 0 2px 0 rgba(255,255,255,0.35)',
                 }}
               >
-                {/* white slot panel */}
+                {/* glossy white slot panel */}
                 <div
                   className="absolute rounded-[10%]"
                   style={{
                     inset: '13%',
-                    background: 'linear-gradient(160deg,#ffffff,#f1ecdb)',
-                    boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.28), 0 1px 0 rgba(255,255,255,0.4)',
+                    background: 'linear-gradient(160deg,#ffffff,#eef1fb)',
+                    boxShadow: 'inset 0 2px 8px rgba(30,35,80,0.22), 0 1px 0 rgba(255,255,255,0.4)',
                   }}
                 >
                   <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 place-items-center p-[7%]">
@@ -175,8 +179,8 @@ export default function Board({
                           <span
                             className="absolute inset-0 rounded-full"
                             style={{
-                              background: 'rgba(255,255,255,0.65)',
-                              boxShadow: `inset 0 0 0 2.5px ${c.main}55, inset 0 2px 4px rgba(0,0,0,0.15)`,
+                              background: 'rgba(255,255,255,0.7)',
+                              boxShadow: `inset 0 0 0 2.5px ${c.main}55, inset 0 2px 4px rgba(30,35,80,0.15)`,
                             }}
                           />
                           {inYard && token && (
@@ -213,7 +217,7 @@ export default function Board({
                 }}
               >
                 {cell.star && (
-                  <svg viewBox="0 0 24 24" className="h-[70%] w-[70%] fill-current text-[#a89f86] opacity-80">
+                  <svg viewBox="0 0 24 24" className="h-[70%] w-[70%] fill-current text-[#8f97c4] opacity-90">
                     <path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z" />
                   </svg>
                 )}
@@ -221,7 +225,7 @@ export default function Board({
             )
           })}
 
-          {/* center home triangles + star */}
+          {/* center home triangles + gold star medallion */}
           <div className="absolute" style={{ left: pct(6), top: pct(6), width: pct(3), height: pct(3) }}>
             <svg viewBox="0 0 90 90" className="h-full w-full">
               <polygon points="0,0 45,45 0,90" fill={COLOR_HEX.red.main} />
@@ -230,7 +234,7 @@ export default function Board({
               <polygon points="0,90 45,45 90,90" fill={COLOR_HEX.blue.main} />
               <polygon points="0,0 45,45 0,90" fill="rgba(255,255,255,0.14)" />
               <polygon points="90,0 45,45 90,90" fill="rgba(0,0,0,0.10)" />
-              <circle cx="45" cy="45" r="13" fill="#fdf8ea" stroke="#b9883f" strokeWidth="3" />
+              <circle cx="45" cy="45" r="13" fill="#fdf8ea" stroke="#d9a636" strokeWidth="3" />
               <path
                 d="M45 35.5l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6-4.5-4.2 6.1-.7z"
                 fill="#f0a10c"
@@ -298,7 +302,7 @@ export default function Board({
               })
           )}
 
-          {/* dice lives in the center (Ludo Star style) */}
+          {/* dice lives in the center */}
           <DiceCenter
             values={diceValues}
             rolling={diceRolling}
@@ -323,7 +327,7 @@ export default function Board({
                   animate={{ opacity: 1, scale: 1.15, y: -6 }}
                   exit={{ opacity: 0, scale: 0.5, y: -18 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 18 }}
-                  className="absolute z-40 flex items-center justify-center rounded-full bg-white shadow-lg ring-2 ring-slate-200"
+                  className="absolute z-40 flex items-center justify-center rounded-full bg-white shadow-lg ring-2 ring-indigo-200"
                   style={{ left: pct(base.c + 2.2), top: pct(base.r + 0.6), width: pct(1.7), height: pct(1.7) }}
                 >
                   <span style={{ fontSize: 'min(5vw, 26px)' }}>{e.emoji}</span>
@@ -337,7 +341,7 @@ export default function Board({
   )
 }
 
-// ---------------- Pawn (Ludo Star 3D token) ----------------
+// ---------------- Pawn (premium 3D token) ----------------
 
 function Pawn({
   color,
@@ -371,7 +375,7 @@ function Pawn({
         </radialGradient>
       </defs>
       {/* ground shadow */}
-      <ellipse cx="32" cy="74" rx="17" ry="4.5" fill="rgba(0,0,0,0.32)" />
+      <ellipse cx="32" cy="74" rx="17" ry="4.5" fill="rgba(20,24,60,0.35)" />
       {/* base */}
       <ellipse cx="32" cy="69.5" rx="17.5" ry="6.5" fill={c.dark} />
       {/* skirt */}
@@ -387,7 +391,9 @@ function Pawn({
       {/* head */}
       <circle cx="32" cy="24" r="12.5" fill={`url(#${headId})`} stroke={c.dark} strokeWidth="1.4" />
       {/* gloss */}
-      <ellipse cx="27.5" cy="19.5" rx="4.8" ry="3.2" fill="rgba(255,255,255,0.9)" transform="rotate(-18 27.5 19.5)" />
+      <ellipse cx="27.5" cy="19.5" rx="4.8" ry="3.2" fill="rgba(255,255,255,0.92)" transform="rotate(-18 27.5 19.5)" />
+      {/* rim light */}
+      <path d="M44 40 C 45 50 45.8 60 46 68" stroke="rgba(255,255,255,0.35)" strokeWidth="1.6" fill="none" strokeLinecap="round" />
     </svg>
   )
 

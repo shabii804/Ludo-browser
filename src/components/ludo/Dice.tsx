@@ -1,8 +1,9 @@
 'use client'
 
 // ============================================================
-// Ludo Star dice: glossy white die faces rendered in the CENTER
-// of the board (on the current player's triangle), tap to roll.
+// Premium 3D dice: glossy ivory faces, inset pips, tumbling
+// roll animation, rendered in the CENTER of the board,
+// tap to roll. API unchanged.
 // ============================================================
 
 import { motion } from 'framer-motion'
@@ -35,13 +36,13 @@ export function DieFace({
       style={{
         ...style,
         background: used
-          ? 'linear-gradient(145deg,#a6b1c2,#7c8ba1)'
-          : 'linear-gradient(150deg,#ffffff 20%,#f2ecdc 85%)',
-        border: '2px solid #cdc4ae',
+          ? 'linear-gradient(145deg,#9aa5c0,#6e7ca0)'
+          : 'linear-gradient(150deg,#ffffff 18%,#eceffb 88%)',
+        border: '2px solid #b9c0e8',
         boxShadow: used
-          ? 'inset 0 3px 9px rgba(0,0,0,0.4)'
-          : '0 4px 10px rgba(0,0,0,0.45), inset 0 -3px 7px rgba(0,0,0,0.12), inset 0 2px 0 rgba(255,255,255,0.95)',
-        opacity: used ? 0.5 : 1,
+          ? 'inset 0 3px 10px rgba(20,25,60,0.45)'
+          : '0 5px 12px rgba(10,14,40,0.5), inset 0 -4px 8px rgba(90,100,160,0.22), inset 0 2px 0 rgba(255,255,255,0.95)',
+        opacity: used ? 0.45 : 1,
       }}
     >
       {(PIP[value] ?? PIP[1]).map(([x, y], i) => (
@@ -51,11 +52,11 @@ export function DieFace({
           style={{
             left: `${x}%`,
             top: `${y}%`,
-            width: '20%',
-            height: '20%',
+            width: '21%',
+            height: '21%',
             transform: 'translate(-50%,-50%)',
-            background: used ? '#8fa0b5' : '#1d2433',
-            boxShadow: 'inset 0 1.5px 2px rgba(0,0,0,0.55)',
+            background: used ? '#8fa0b5' : 'radial-gradient(circle at 35% 30%, #3d4766, #141a33 70%)',
+            boxShadow: 'inset 0 2px 3px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.5)',
           }}
         />
       ))}
@@ -101,7 +102,7 @@ export default function DiceCenter({
       {/* soft plate shadow under the dice */}
       <div
         className="absolute inset-[4%] rounded-full"
-        style={{ background: 'radial-gradient(circle, rgba(0,0,0,0.22), transparent 68%)' }}
+        style={{ background: 'radial-gradient(circle, rgba(10,14,40,0.28), transparent 68%)' }}
       />
 
       {rolling ? (
@@ -109,12 +110,15 @@ export default function DiceCenter({
           <motion.div
             className="h-[80%] w-[80%]"
             animate={{
-              rotate: [0, 90, 200, 320, 430],
-              scale: [1, 1.18, 0.9, 1.12, 1],
+              rotateX: [0, 180, 360, 540, 720],
+              rotateY: [0, 120, 240, 480, 600],
+              rotate: [0, 40, 0, -30, 0],
+              scale: [1, 1.16, 0.94, 1.1, 1],
               x: [0, -6, 6, -3, 0],
               y: [0, 3, -4, 2, 0],
             }}
-            transition={{ repeat: Infinity, duration: 0.55, ease: 'easeInOut' }}
+            transition={{ repeat: Infinity, duration: 0.62, ease: 'easeInOut' }}
+            style={{ transformStyle: 'preserve-3d', perspective: 400 }}
           >
             <DieFace value={3} />
           </motion.div>
@@ -179,10 +183,10 @@ export default function DiceCenter({
               <motion.span
                 className="ls-font absolute -top-7 left-1/2 -translate-x-1/2 rounded-full px-3 py-0.5 text-sm leading-tight text-white"
                 style={{
-                  background: 'linear-gradient(180deg,#ffcf4d,#f0a10c)',
+                  background: 'linear-gradient(180deg,#ffe08a,#f0a10c)',
                   border: '2px solid #fff3c9',
                   textShadow: '0 1px 0 rgba(120,60,0,0.65)',
-                  boxShadow: '0 3px 6px rgba(0,0,0,0.45)',
+                  boxShadow: '0 3px 8px rgba(0,0,0,0.45)',
                 }}
                 animate={{ y: [0, -4, 0] }}
                 transition={{ repeat: Infinity, duration: 0.9 }}

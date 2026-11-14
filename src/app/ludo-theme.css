@@ -1,28 +1,42 @@
-/* Ludo Star 2017 theme: wooden menu, felt table, gold trim */
 /* ============================================================
-   LUDO STAR 2017 theme: wooden menu, felt table, gold trim
+   LUDO ROYALE — premium gaming design system
+   Deep navy → purple gradients, glass panels, gold accents,
+   rich player colors. Typography: Lilita One display.
    ============================================================ */
 
 body {
-  background: #140b04;
+  background: #070a18;
+  color: #e7e9f4;
 }
 
 .ls-font {
   font-family: var(--font-lilita), "Arial Rounded MT Bold", "Baloo 2", ui-rounded, system-ui, sans-serif;
 }
 
-/* wooden table backdrop (menu) */
-.ls-wood {
+/* ---------- app backdrop ---------- */
+
+.ls-bg {
   background:
-    radial-gradient(120% 90% at 50% 0%, rgba(255, 193, 110, 0.16) 0%, transparent 55%),
-    repeating-linear-gradient(92deg, rgba(56, 26, 6, 0.11) 0px, rgba(56, 26, 6, 0.11) 2px, transparent 2px, transparent 17px),
-    repeating-linear-gradient(88deg, rgba(255, 220, 160, 0.05) 0px, rgba(255, 220, 160, 0.05) 1px, transparent 1px, transparent 24px),
-    linear-gradient(180deg, #9c6429 0%, #7c4c1f 48%, #5c3817 100%);
+    radial-gradient(90% 60% at 50% -10%, rgba(124, 58, 237, 0.20) 0%, transparent 60%),
+    radial-gradient(70% 50% at 85% 110%, rgba(42, 142, 224, 0.12) 0%, transparent 60%),
+    radial-gradient(60% 45% at 10% 100%, rgba(229, 69, 60, 0.10) 0%, transparent 60%),
+    linear-gradient(180deg, #0b0f26 0%, #0a0c20 45%, #0d0a24 100%);
 }
 
-/* green casino felt backdrop (game) */
-.ls-felt {
-  background: radial-gradient(130% 110% at 50% 38%, #1a5f41 0%, #10452f 48%, #08291c 82%, #041a12 100%);
+.ls-starfield {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1.5px 1.5px at 12% 22%, rgba(255, 255, 255, 0.5) 45%, transparent 55%),
+    radial-gradient(1px 1px at 28% 68%, rgba(255, 255, 255, 0.35) 45%, transparent 55%),
+    radial-gradient(1.5px 1.5px at 45% 12%, rgba(255, 255, 255, 0.4) 45%, transparent 55%),
+    radial-gradient(1px 1px at 62% 40%, rgba(255, 255, 255, 0.3) 45%, transparent 55%),
+    radial-gradient(1.5px 1.5px at 78% 18%, rgba(255, 255, 255, 0.45) 45%, transparent 55%),
+    radial-gradient(1px 1px at 88% 58%, rgba(255, 255, 255, 0.35) 45%, transparent 55%),
+    radial-gradient(1px 1px at 8% 82%, rgba(255, 255, 255, 0.3) 45%, transparent 55%),
+    radial-gradient(1.5px 1.5px at 68% 88%, rgba(255, 255, 255, 0.3) 45%, transparent 55%);
 }
 
 .ls-vignette {
@@ -30,83 +44,172 @@ body {
   inset: 0;
   pointer-events: none;
   z-index: 5;
-  background: radial-gradient(120% 120% at 50% 45%, transparent 52%, rgba(0, 0, 0, 0.52) 100%);
+  background: radial-gradient(120% 120% at 50% 45%, transparent 55%, rgba(2, 4, 12, 0.55) 100%);
 }
 
-/* dark wooden panel */
+/* ---------- glass panels ---------- */
+
 .ls-panel {
-  background: linear-gradient(180deg, rgba(88, 53, 24, 0.94), rgba(60, 34, 14, 0.94));
-  border: 2px solid #c99e5f;
+  background: linear-gradient(165deg, rgba(30, 35, 74, 0.78), rgba(16, 18, 44, 0.82));
+  border: 1.5px solid rgba(148, 163, 255, 0.18);
   box-shadow:
-    0 8px 20px rgba(0, 0, 0, 0.45),
-    inset 0 2px 0 rgba(255, 220, 170, 0.25),
-    inset 0 -6px 14px rgba(0, 0, 0, 0.3);
+    0 10px 30px rgba(2, 4, 16, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
 }
 
-/* big carved wooden button */
+.ls-panel-gold {
+  border-color: rgba(246, 196, 83, 0.45);
+  box-shadow:
+    0 10px 30px rgba(2, 4, 16, 0.5),
+    0 0 0 1px rgba(246, 196, 83, 0.12),
+    inset 0 1px 0 rgba(255, 236, 190, 0.14);
+}
+
+.ls-chip {
+  background: rgba(10, 13, 34, 0.72);
+  border: 1.5px solid rgba(148, 163, 255, 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* ---------- buttons ---------- */
+
 .ls-btn {
   position: relative;
-  background: linear-gradient(180deg, #e59b4b 0%, #cd7d2f 52%, #a35c1e 100%);
-  border: 3px solid #f6dfae;
+  background: linear-gradient(180deg, #8b5cf6 0%, #7237e8 55%, #5b21b6 100%);
+  border: 2.5px solid rgba(196, 181, 253, 0.75);
   box-shadow:
-    0 5px 0 #7a4517,
-    0 10px 18px rgba(0, 0, 0, 0.4),
-    inset 0 2px 0 rgba(255, 235, 190, 0.55);
-  text-shadow: 0 2px 0 rgba(90, 40, 5, 0.6);
+    0 5px 0 #3b1580,
+    0 12px 22px rgba(60, 20, 140, 0.35),
+    inset 0 2px 0 rgba(255, 255, 255, 0.35);
+  text-shadow: 0 2px 0 rgba(40, 10, 90, 0.55);
   transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s ease;
 }
-.ls-btn:hover {
-  filter: brightness(1.07);
-}
+.ls-btn:hover { filter: brightness(1.09); }
 .ls-btn:active {
   transform: translateY(4px);
-  box-shadow:
-    0 1px 0 #7a4517,
-    0 4px 8px rgba(0, 0, 0, 0.35),
-    inset 0 2px 0 rgba(255, 235, 190, 0.4);
+  box-shadow: 0 1px 0 #3b1580, 0 4px 8px rgba(0, 0, 0, 0.35);
 }
 .ls-btn:disabled {
-  filter: grayscale(0.4) brightness(0.7);
+  filter: grayscale(0.45) brightness(0.65);
   transform: none;
+  cursor: not-allowed;
 }
 
-/* green button (online / play) */
 .ls-btn-green {
-  background: linear-gradient(180deg, #6cc257 0%, #47a136 52%, #327c25 100%);
-  border-color: #dcf3c8;
+  background: linear-gradient(180deg, #4ade80 0%, #2fbf5f 50%, #17903c 100%);
+  border-color: rgba(210, 250, 220, 0.8);
   box-shadow:
-    0 5px 0 #23531b,
-    0 10px 18px rgba(0, 0, 0, 0.4),
-    inset 0 2px 0 rgba(240, 255, 220, 0.5);
-  text-shadow: 0 2px 0 rgba(20, 70, 10, 0.55);
+    0 5px 0 #0e5a26,
+    0 12px 22px rgba(10, 90, 40, 0.35),
+    inset 0 2px 0 rgba(240, 255, 230, 0.5);
+  text-shadow: 0 2px 0 rgba(8, 60, 25, 0.55);
 }
-.ls-btn-green:active {
-  box-shadow: 0 1px 0 #23531b, 0 4px 8px rgba(0, 0, 0, 0.35);
+.ls-btn-green:active { box-shadow: 0 1px 0 #0e5a26, 0 4px 8px rgba(0, 0, 0, 0.35); }
+
+.ls-btn-gold {
+  background: linear-gradient(180deg, #ffe08a 0%, #f6c453 48%, #e09b1a 100%);
+  border-color: rgba(255, 244, 214, 0.9);
+  box-shadow:
+    0 5px 0 #9a6a08,
+    0 14px 26px rgba(160, 100, 10, 0.4),
+    inset 0 2px 0 rgba(255, 255, 255, 0.6);
+  text-shadow: 0 2px 0 rgba(120, 70, 5, 0.5);
 }
+.ls-btn-gold:active { box-shadow: 0 1px 0 #9a6a08, 0 4px 8px rgba(0, 0, 0, 0.35); }
+
+.ls-btn-red {
+  background: linear-gradient(180deg, #f4695f 0%, #e5453c 50%, #b02820 100%);
+  border-color: rgba(255, 210, 205, 0.8);
+  box-shadow:
+    0 5px 0 #7c130e,
+    0 12px 22px rgba(120, 20, 15, 0.4),
+    inset 0 2px 0 rgba(255, 235, 230, 0.5);
+  text-shadow: 0 2px 0 rgba(90, 12, 8, 0.55);
+}
+
+.ls-btn-ghost {
+  background: rgba(148, 163, 255, 0.08);
+  border: 1.5px solid rgba(148, 163, 255, 0.22);
+  box-shadow: none;
+  text-shadow: none;
+}
+.ls-btn-ghost:hover { background: rgba(148, 163, 255, 0.14); }
 
 /* small inset chip (stakes, options) */
-.ls-chip {
-  background: linear-gradient(180deg, #5f3a1c, #422711);
-  border: 1.5px solid #b98a52;
-  box-shadow: inset 0 1px 0 rgba(255, 220, 170, 0.18);
+.ls-option {
+  background: rgba(12, 15, 38, 0.8);
+  border: 2px solid rgba(148, 163, 255, 0.22);
+  box-shadow: 0 2px 0 rgba(2, 4, 16, 0.5);
+  transition: all 0.15s ease;
+}
+.ls-option:hover { border-color: rgba(196, 181, 253, 0.5); }
+.ls-option[data-active="true"] {
+  background: linear-gradient(180deg, #8b5cf6, #6d28d9);
+  border-color: #ddd6fe;
+  box-shadow: 0 3px 0 #4c1d95, 0 8px 14px rgba(80, 30, 160, 0.4);
 }
 
-/* logo text */
+/* ---------- logo ---------- */
+
 .ls-logo-ludo {
-  color: #fff7e0;
-  -webkit-text-stroke: 2.5px #71330d;
-  text-shadow: 0 4px 0 #71330d, 0 9px 18px rgba(0, 0, 0, 0.55);
+  color: #f4f6ff;
+  -webkit-text-stroke: 2.5px #241056;
+  text-shadow:
+    0 2px 0 #241056,
+    0 4px 0 #1a0b3e,
+    0 9px 22px rgba(124, 58, 237, 0.45);
   letter-spacing: 0.03em;
 }
 .ls-logo-star {
   color: transparent;
-  background: linear-gradient(180deg, #fff3b0 0%, #ffd23e 45%, #f0a10c 88%);
+  background: linear-gradient(180deg, #fff6c9 0%, #ffd75e 45%, #f2a71b 90%);
   -webkit-background-clip: text;
   background-clip: text;
-  filter: drop-shadow(0 2px 0 #a05a08) drop-shadow(0 6px 9px rgba(0, 0, 0, 0.5));
-  letter-spacing: 0.18em;
+  filter: drop-shadow(0 2px 0 #8a5a08) drop-shadow(0 7px 14px rgba(246, 196, 83, 0.3));
+  letter-spacing: 0.2em;
 }
 
 .ls-name-shadow {
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
+  text-shadow: 0 1.5px 0 rgba(2, 4, 16, 0.7);
+}
+
+/* ---------- felt table (game screen) ---------- */
+
+.ls-felt {
+  background:
+    radial-gradient(120% 90% at 50% 30%, rgba(124, 58, 237, 0.14) 0%, transparent 55%),
+    radial-gradient(130% 110% at 50% 42%, #1c2246 0%, #131735 45%, #0b0e26 78%, #060818 100%);
+}
+
+/* ---------- scrollbar ---------- */
+
+.ls-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+.ls-scroll::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.04); border-radius: 8px; }
+.ls-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #8b5cf6, #5b21b6);
+  border-radius: 8px;
+}
+
+/* ---------- misc ---------- */
+
+.ls-glass-input {
+  background: rgba(10, 13, 34, 0.72);
+  border: 1.5px solid rgba(148, 163, 255, 0.25);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.ls-glass-input:focus {
+  outline: none;
+  border-color: #a78bfa;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25);
+}
+
+.ls-safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 0px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ls-spin-slow, .ls-float {
+    animation: none !important;
+  }
 }

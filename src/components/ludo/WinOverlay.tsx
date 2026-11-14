@@ -1,7 +1,7 @@
 'use client'
 
-// Win / game-over overlay - Ludo Star style: golden WINNER banner,
-// spinning rays, trophy, pot payout, carved buttons.
+// Win / game-over overlay — premium navy/gold celebration:
+// spinning rays, trophy, pot payout, glass buttons, confetti.
 
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
@@ -10,7 +10,7 @@ import type { WinData } from '@/stores/ludoStore'
 import { COLOR_HEX } from '@/lib/ludo/board'
 import { useLudo } from '@/stores/ludoStore'
 
-const CONFETTI_COLORS = ['#ffd23e', '#e5453c', '#46a848', '#2a8ee0', '#ff8fab', '#a855f7']
+const CONFETTI_COLORS = ['#ffd23e', '#e5453c', '#46a848', '#2a8ee0', '#ff8fab', '#a78bfa', '#5eead4']
 
 function Confetti({ n = 60 }: { n?: number }) {
   const pieces = useMemo(
@@ -50,17 +50,16 @@ export default function WinOverlay({ win, isOnline }: { win: WinData; isOnline: 
   const c = COLOR_HEX[win.winner]
 
   return (
-    <div className="fixed inset-0 z-[60] grid place-items-center bg-black/70" style={{ backdropFilter: 'blur(5px)' }}>
+    <div className="fixed inset-0 z-[60] grid place-items-center bg-[#04061a]/80" style={{ backdropFilter: 'blur(6px)' }}>
       {win.youWon && <Confetti />}
       <motion.div
         initial={{ scale: 0.7, opacity: 0, y: 30 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 220, damping: 20 }}
-        className="relative mx-4 w-full max-w-sm overflow-hidden rounded-3xl p-6 text-center"
+        className="ls-panel ls-panel-gold relative mx-4 w-full max-w-sm overflow-hidden rounded-3xl p-6 text-center"
         style={{
-          background: 'linear-gradient(170deg, #7a4c22 0%, #5d3a1c 55%, #462a12 100%)',
-          border: '4px solid #f3d9a4',
-          boxShadow: `0 0 60px ${c.glow}, 0 24px 50px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,230,180,0.35)`,
+          background: 'linear-gradient(170deg, rgba(38,33,88,0.96) 0%, rgba(22,20,56,0.96) 55%, rgba(14,12,40,0.96) 100%)',
+          boxShadow: `0 0 60px ${c.glow}, 0 24px 50px rgba(2,4,16,0.7), inset 0 2px 0 rgba(255,230,180,0.2)`,
         }}
       >
         {/* spinning rays behind trophy */}
@@ -68,7 +67,7 @@ export default function WinOverlay({ win, isOnline }: { win: WinData; isOnline: 
           <motion.span
             className="pointer-events-none absolute left-1/2 top-10 h-56 w-56 -translate-x-1/2 rounded-full"
             style={{
-              background: 'repeating-conic-gradient(rgba(255,214,90,0.30) 0deg 11deg, transparent 11deg 26deg)',
+              background: 'repeating-conic-gradient(rgba(246,196,83,0.28) 0deg 11deg, transparent 11deg 26deg)',
               maskImage: 'radial-gradient(circle, black 0%, transparent 68%)',
               WebkitMaskImage: 'radial-gradient(circle, black 0%, transparent 68%)',
             }}
@@ -88,22 +87,22 @@ export default function WinOverlay({ win, isOnline }: { win: WinData; isOnline: 
           🏆
         </div>
 
-        <h2 className="ls-font text-4xl leading-none" style={{ color: win.youWon ? '#ffd23e' : '#fff3d6', textShadow: '0 3px 0 rgba(70,30,5,0.7), 0 6px 14px rgba(0,0,0,0.5)' }}>
+        <h2 className="ls-font text-4xl leading-none" style={{ color: win.youWon ? '#ffd75e' : '#f4f6ff', textShadow: '0 3px 0 rgba(10,6,40,0.8), 0 6px 14px rgba(2,4,16,0.6)' }}>
           {win.youWon ? 'WINNER!' : `${win.winnerName.toUpperCase()} WINS!`}
         </h2>
-        <p className="ls-name-shadow mt-1.5 text-sm text-amber-100/80">
+        <p className="ls-name-shadow mt-1.5 text-sm text-indigo-200/80">
           {win.winnerName} finished all tokens first
         </p>
 
         <div
           className="ls-chip mx-auto mt-4 w-fit rounded-2xl px-6 py-3"
-          style={{ borderColor: 'rgba(255,210,90,0.6)' }}
+          style={{ borderColor: 'rgba(246,196,83,0.5)' }}
         >
           <span className="ls-font text-xs tracking-wider text-amber-200/80">WINNER POT</span>
-          <div className="ls-font text-4xl leading-tight text-amber-300" style={{ textShadow: '0 2px 0 rgba(70,30,5,0.6)' }}>
+          <div className="ls-font text-4xl leading-tight text-amber-300" style={{ textShadow: '0 2px 0 rgba(60,26,4,0.6)' }}>
             +{win.pot.toLocaleString()}
           </div>
-          <span className="text-[11px] text-amber-100/60">
+          <span className="text-[11px] text-indigo-200/60">
             {win.youWon ? 'coins added to your wallet' : `${win.winnerName} takes the pot`}
           </span>
         </div>

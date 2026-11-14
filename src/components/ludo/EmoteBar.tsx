@@ -1,6 +1,6 @@
 'use client'
 
-// Emote bar + quick chat + chat panel - Ludo Star style wooden buttons
+// Emote bar + quick chat + chat panel — premium glass styling
 
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -38,14 +38,14 @@ export function EmoteBar({
                     setOpen(false)
                   }}
                   className="grid h-9 w-9 place-items-center rounded-xl text-xl transition hover:scale-110"
-                  style={{ background: 'rgba(255,255,255,0.08)' }}
+                  style={{ background: 'rgba(148,163,255,0.08)' }}
                   aria-label={`Send emote ${e}`}
                 >
                   {e}
                 </button>
               ))}
             </div>
-            <div className="mt-1.5 border-t border-amber-700/50 pt-1.5">
+            <div className="mt-1.5 border-t border-white/10 pt-1.5">
               <div className="flex flex-wrap gap-1">
                 {CHAT_QUICK.slice(0, 4).map((q) => (
                   <button
@@ -54,7 +54,7 @@ export function EmoteBar({
                       sendQuick(q, onEmote)
                       setOpen(false)
                     }}
-                    className="ls-chip rounded-full px-2.5 py-1 text-[10px] text-amber-100 transition hover:brightness-125"
+                    className="ls-chip rounded-full px-2.5 py-1 text-[10px] text-indigo-100 transition hover:brightness-125"
                   >
                     {q}
                   </button>
@@ -70,7 +70,7 @@ export function EmoteBar({
         className="ls-panel grid h-11 w-11 place-items-center rounded-full transition hover:brightness-125"
         aria-label="Send emote"
       >
-        <Smile size={20} className="text-amber-300" />
+        <Smile size={20} className="text-violet-300" />
       </motion.button>
       <motion.button
         whileTap={{ scale: 0.9 }}
@@ -78,9 +78,9 @@ export function EmoteBar({
         className="ls-panel relative grid h-11 w-11 place-items-center rounded-full transition hover:brightness-125"
         aria-label="Open chat"
       >
-        <MessageCircle size={19} className="text-amber-300" />
+        <MessageCircle size={19} className="text-violet-300" />
         {unread > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 grid h-4 w-4 place-items-center rounded-full bg-red-500 text-[9px] font-bold text-white ring-1 ring-white/60">
+          <span className="absolute -right-0.5 -top-0.5 grid h-4 w-4 place-items-center rounded-full bg-rose-500 text-[9px] font-bold text-white ring-1 ring-white/60">
             {unread}
           </span>
         )}
@@ -118,14 +118,14 @@ export function ChatPanel({
           className="ls-panel fixed bottom-4 left-4 z-50 w-72 rounded-2xl"
           style={{ backdropFilter: 'blur(8px)' }}
         >
-          <div className="flex items-center justify-between border-b border-amber-700/50 px-3 py-2">
-            <span className="ls-font text-xs text-amber-100">TABLE CHAT</span>
-            <button onClick={onClose} aria-label="Close chat" className="text-amber-200/70 hover:text-white">
+          <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
+            <span className="ls-font text-xs text-indigo-100">TABLE CHAT</span>
+            <button onClick={onClose} aria-label="Close chat" className="text-indigo-300/70 hover:text-white">
               <X size={15} />
             </button>
           </div>
-          <div className="max-h-44 space-y-1.5 overflow-y-auto px-3 py-2">
-            {chat.length === 0 && <p className="py-6 text-center text-[11px] text-amber-100/50">No messages yet. Say hi!</p>}
+          <div className="ls-scroll max-h-44 space-y-1.5 overflow-y-auto px-3 py-2">
+            {chat.length === 0 && <p className="py-6 text-center text-[11px] text-indigo-300/50">No messages yet. Say hi!</p>}
             {chat.map((m) => (
               <div key={m.id} className="flex items-start gap-1.5 text-[11px]">
                 <span
@@ -135,12 +135,12 @@ export function ChatPanel({
                 <span className="font-bold" style={{ color: COLOR_HEX[m.color]?.light ?? '#e2e8f0' }}>
                   {m.name}:
                 </span>
-                <span className="text-amber-50/90">{m.text}</span>
+                <span className="text-indigo-50/90">{m.text}</span>
               </div>
             ))}
           </div>
           <form
-            className="flex gap-1.5 border-t border-amber-700/50 p-2"
+            className="flex gap-1.5 border-t border-white/10 p-2"
             onSubmit={(e) => {
               e.preventDefault()
               if (!text.trim()) return
@@ -153,7 +153,7 @@ export function ChatPanel({
               onChange={(e) => setText(e.target.value)}
               placeholder="Type a message..."
               maxLength={120}
-              className="ls-chip min-w-0 flex-1 rounded-lg px-2.5 py-1.5 text-[11px] text-amber-50 placeholder:text-amber-200/40 focus:outline-none focus:ring-1 focus:ring-amber-300"
+              className="ls-glass-input min-w-0 flex-1 rounded-lg px-2.5 py-1.5 text-[11px] text-indigo-50 placeholder:text-indigo-300/40"
               aria-label="Chat message"
             />
             <button

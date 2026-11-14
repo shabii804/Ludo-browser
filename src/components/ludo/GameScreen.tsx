@@ -1,7 +1,8 @@
 'use client'
 
-// Game screen: Ludo Star table - felt backdrop, board with center
-// dice, corner player plaques, emotes, chat, timer.
+// Game screen: premium navy table — glass top bar, board with
+// center dice, player cards around, emotes, chat, timer.
+// All game logic & handlers preserved.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -13,6 +14,7 @@ import WinOverlay from '@/components/ludo/WinOverlay'
 import { useLudo } from '@/stores/ludoStore'
 import { COLOR_HEX } from '@/lib/ludo/board'
 import { MODE_LABELS, TURN_SECONDS } from '@/lib/ludo/constants'
+import { CoinIcon } from '@/components/ludo/ui'
 
 export default function GameScreen() {
   const game = useLudo((s) => s.game)
@@ -113,8 +115,7 @@ export default function GameScreen() {
   }
 
   const turnName = game.players[game.turn].name
-  // Ludo Star behavior: dice shows TAP state when you can roll,
-  // otherwise shows the last rolled value(s)
+  // dice shows TAP state when you can roll, otherwise last rolled value(s)
   const displayDice = canRoll && game.phase === 'roll' ? [] : diceValues.length > 0 ? diceValues : game.dice
 
   return (
@@ -126,19 +127,19 @@ export default function GameScreen() {
           <div className="flex items-center gap-2">
             <button
               onClick={leaveGame}
-              className="ls-panel grid h-9 w-9 place-items-center rounded-full text-amber-100 transition hover:brightness-125 hover:text-white"
+              className="ls-panel grid h-9 w-9 place-items-center rounded-full text-indigo-200 transition hover:text-white"
               aria-label="Leave game"
             >
               <LogOut size={16} />
             </button>
-            <div className="ls-panel rounded-full px-3 py-1.5 text-[11px] font-bold text-amber-100/90">
+            <div className="ls-panel rounded-full px-3 py-1.5 text-[11px] font-bold text-indigo-100">
               {MODE_LABELS[session.mode].toUpperCase()}
               {session.online ? ` · ROOM ${session.roomCode}` : ' · OFFLINE'}
             </div>
           </div>
           <div className="flex items-center gap-2">
             <div className="ls-panel flex items-center gap-1.5 rounded-full px-3 py-1.5">
-              <span className="text-sm">🪙</span>
+              <CoinIcon size={15} />
               <span className="ls-font text-xs text-amber-200">{profile.coins.toLocaleString()}</span>
               <span className="rounded-full bg-amber-500/15 px-1.5 text-[10px] font-bold text-amber-300">
                 pot {session.pot.toLocaleString()}
@@ -146,7 +147,7 @@ export default function GameScreen() {
             </div>
             <button
               onClick={toggleSound}
-              className="ls-panel grid h-9 w-9 place-items-center rounded-full text-amber-100 transition hover:brightness-125"
+              className="ls-panel grid h-9 w-9 place-items-center rounded-full text-indigo-200 transition hover:text-white"
               aria-label={soundOn ? 'Mute sound' : 'Unmute sound'}
             >
               {soundOn ? <Volume2 size={16} /> : <VolumeX size={16} />}
@@ -167,14 +168,14 @@ export default function GameScreen() {
                 style={{
                   background:
                     m.kind === 'capture'
-                      ? 'linear-gradient(180deg,#d9534f,#a5231d)'
+                      ? 'linear-gradient(180deg,#f4695f,#b02820)'
                       : m.kind === 'six'
-                        ? 'linear-gradient(180deg,#ffcf4d,#e39a14)'
+                        ? 'linear-gradient(180deg,#ffe08a,#e09b1a)'
                         : m.kind === 'forfeit'
-                          ? 'linear-gradient(180deg,#8a2a1d,#521610)'
-                          : 'linear-gradient(180deg,#6e441f,#462a12)',
-                  border: '2px solid rgba(246,223,174,0.85)',
-                  textShadow: '0 1px 0 rgba(60,25,5,0.6)',
+                          ? 'linear-gradient(180deg,#7f1d1d,#450a0a)'
+                          : 'linear-gradient(180deg,#3b3f75,#22254e)',
+                  border: '2px solid rgba(196,181,253,0.7)',
+                  textShadow: '0 1px 0 rgba(10,6,30,0.6)',
                 }}
               >
                 {m.text}
@@ -185,7 +186,7 @@ export default function GameScreen() {
 
         {/* main layout: players around board */}
         <div className="flex flex-1 flex-col items-center justify-center gap-2">
-          {/* player strip (mobile-friendly: always visible, wraps on desktop to sides) */}
+          {/* player strip (mobile) */}
           <div className="grid w-full max-w-2xl grid-cols-2 gap-1.5 sm:gap-2 md:hidden">
             {game.players.map((p, i) => (
               <PlayerCard key={p.color} player={cardData(i)!} compact remainingSec={game.turn === i ? remainingSec : null} emote={emoteFor(p.color)} />
@@ -259,7 +260,7 @@ export default function GameScreen() {
                   : `${turnName.toUpperCase()}'S TURN${game.players[game.turn].isBot ? ' (BOT)' : ''}`}
           </div>
           {game.mode === 'master' && game.dice.length > 1 && (
-            <div className="text-center text-[10px] text-amber-100/50">Master mode: use both dice · tap a die to switch</div>
+            <div className="text-center text-[10px] text-indigo-300/50">Master mode: use both dice · tap a die to switch</div>
           )}
         </div>
 
