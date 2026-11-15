@@ -28,7 +28,7 @@ export default function LudoApp() {
   const Active = VIEWS[view] ?? MenuScreen
 
   return (
-    <main className="ls-bg min-h-screen text-indigo-50">
+    <main className="ls-bg h-[100dvh] overflow-hidden text-indigo-50">
       <AnimatePresence mode="wait">
         <motion.div
           key={view}
@@ -36,6 +36,7 @@ export default function LudoApp() {
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.985 }}
           transition={{ duration: 0.22, ease: 'easeOut' }}
+          className="h-full"
         >
           <Active />
         </motion.div>

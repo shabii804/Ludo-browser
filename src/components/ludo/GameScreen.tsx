@@ -119,9 +119,9 @@ export default function GameScreen() {
   const displayDice = canRoll && game.phase === 'roll' ? [] : diceValues.length > 0 ? diceValues : game.dice
 
   return (
-    <div className="ls-felt relative min-h-screen">
+    <div className="ls-felt relative h-full">
       <div className="ls-vignette" />
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-5xl flex-col px-2 pb-3 pt-2 sm:px-4">
+      <div className="relative z-10 mx-auto flex h-full w-full max-w-5xl flex-col px-2 pb-3 pt-2 sm:px-4">
         {/* top bar */}
         <div className="mb-1.5 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
