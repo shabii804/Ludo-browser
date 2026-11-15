@@ -1,0 +1,1159 @@
+     1→'use client'
+     2→
+     3→// ============================================================
+     4→// HOME LOBBY — Ludo STAR style
+     5→// Fixed-size (fills viewport, NO page scroll), phone-format
+     6→// column identical on desktop. Magenta/purple play-first theme:
+     7→// top currency bar, player row + 3 quick tables, left rail,
+     8→// watermark, big 2 PLAYER / PRIVATE TABLE tiles, mode row,
+     9→// Shop · Friends · Home · Collections · Chest bottom nav.
+    10→// Every existing action is preserved (modes, stakes, practice,
+    11→// daily reward, friends, leaderboard, profile, sound, rooms).
+    12→// ============================================================
+    13→
+    14→import { useEffect, useState } from 'react'
+    15→import { AnimatePresence, motion } from 'framer-motion'
+    16→import {
+    17→  Bot, Check, ChevronRight, Copy, Crown, Film, Flag, Gift, Globe, Home as HomeIcon,
+    18→  KeyRound, LayoutGrid, Loader2, Lock, Send, ShoppingCart, Star, Timer, Trophy,
+    19→  Users, Volume2, VolumeX, Zap,
+    20→} from 'lucide-react'
+    21→import { useLudo } from '@/stores/ludoStore'
+    22→import { AVATARS, FREE_REFILL, STAKES } from '@/lib/ludo/constants'
+    23→import { ACHIEVEMENTS, BOT_FRIENDS, LEADERBOARD_SEED, levelFromWins, rankTitle } from '@/lib/ludo/social'
+    24→import { DAILY_REWARDS } from '@/stores/ludoStore'
+    25→import { AvatarRing, CoinIcon, GemIcon, LudoLogo, ModeIllustration } from '@/components/ludo/ui'
+    26→import type { GameMode } from '@/lib/ludo/types'
+    27→
+    28→type LobbyTab = 'home' | 'friends' | 'collections' | 'chest' | 'shop'
+    29→type SheetKind = null | 'table2' | 'table4' | 'private' | 'ranks'
+    30→
+    31→const EVENTS = [
+    32→  { icon: '💎', title: 'Season 1 is live', text: 'Climb the leaderboard and collect gems for every win.' },
+    33→  { icon: '🎁', title: 'Daily login streak', text: 'Claim growing coin rewards every single day.' },
+    34→  { icon: '🎉', title: 'Weekend tables', text: 'Bigger pots on Master mode every Saturday & Sunday.' },
+    35→]
+    36→
+    37→// ---------- tile artworks (original) ----------
+    38→
+    39→/** Big "2" + tokens + dice — 2 PLAYER tile. */
+    40→function Art2P() {
+    41→  return (
+    42→    <svg viewBox="0 0 120 84" className="h-full w-full">
+    43→      <ellipse cx="60" cy="70" rx="44" ry="9" fill="rgba(120,60,0,0.25)" />
+    44→      <rect x="18" y="44" width="84" height="26" rx="7" fill="#fdf6e6" opacity="0.92" />
+    45→      <rect x="18" y="44" width="22" height="26" rx="6" fill="#e5453c" />
+    46→      <rect x="80" y="44" width="22" height="26" rx="6" fill="#2a8ee0" />
+    47→      <rect x="40" y="44" width="40" height="26" fill="#fdf6e6" />
+    48→      <circle cx="34" cy="57" r="7" fill="#b02820" stroke="#fff" strokeWidth="2" />
+    49→      <circle cx="86" cy="57" r="7" fill="#1d5c9e" stroke="#fff" strokeWidth="2" />
+    50→      <g transform="rotate(-12 74 30)">
+    51→        <rect x="62" y="18" width="24" height="24" rx="6" fill="#fff" stroke="#d9cbb0" strokeWidth="1.5" />
+    52→        <circle cx="68" cy="24" r="2.4" fill="#303a4e" />
+    53→        <circle cx="80" cy="36" r="2.4" fill="#303a4e" />
+    54→        <circle cx="74" cy="30" r="2.4" fill="#e5453c" />
+    55→      </g>
+    56→      <text x="34" y="42" textAnchor="middle" fontFamily="var(--font-lilita), Arial Rounded MT Bold, sans-serif" fontSize="44" fontWeight="900" fill="#e5453c" stroke="#fff" strokeWidth="5" paintOrder="stroke">2</text>
+    57→    </svg>
+    58→  )
+    59→}
+    60→
+    61→/** Heart + tokens — PRIVATE TABLE tile. */
+    62→function ArtPrivate() {
+    63→  return (
+    64→    <svg viewBox="0 0 120 84" className="h-full w-full">
+    65→      <ellipse cx="60" cy="72" rx="42" ry="8" fill="rgba(20,5,50,0.35)" />
+    66→      <rect x="24" y="40" width="72" height="24" rx="7" fill="#fdf6e6" opacity="0.92" />
+    67→      <rect x="24" y="40" width="20" height="24" rx="6" fill="#46a848" />
+    68→      <rect x="76" y="40" width="20" height="24" rx="6" fill="#2a8ee0" />
+    69→      <circle cx="36" cy="52" r="6.5" fill="#2f7c33" stroke="#fff" strokeWidth="2" />
+    70→      <circle cx="84" cy="52" r="6.5" fill="#1d5c9e" stroke="#fff" strokeWidth="2" />
+    71→      <path d="M60 16c5-8 16-8 20 0 4 8-2 14-9 19l-2 1.6-2-1.6c-7-5-13-11-9-19 4-8 15-8 20 0" fill="#e5453c" stroke="#fff" strokeWidth="3" transform="translate(-8 0) scale(1.06)" />
+    72→    </svg>
+    73→  )
+    74→}
+    75→
+    76→/** Laurel + star — VIP tile. */
+    77→function ArtVip() {
+    78→  return (
+    79→    <svg viewBox="0 0 100 62" className="h-full w-full">
+    80→      <path d="M24 10c-9 7-11 22 2 30M76 10c9 7 11 22-2 30" fill="none" stroke="#ffe08a" strokeWidth="3.4" strokeLinecap="round" />
+    81→      <path d="M50 10l4.6 9.6 10.6 1.4-7.8 7.2 2 10.4-9.4-5.2-9.4 5.2 2-10.4-7.8-7.2 10.6-1.4z" fill="url(#vip-g)" stroke="#fff3c4" strokeWidth="1.6" />
+    82→      <defs>
+    83→        <linearGradient id="vip-g" x1="0" y1="0" x2="0" y2="1">
+    84→          <stop offset="0" stopColor="#fff3c4" />
+    85→          <stop offset="1" stopColor="#f0a10c" />
+    86→        </linearGradient>
+    87→      </defs>
+    88→    </svg>
+    89→  )
+    90→}
+    91→
+    92→/** Trophy — STREAK STARS tile. */
+    93→function ArtStreak() {
+    94→  return (
+    95→    <svg viewBox="0 0 100 62" className="h-full w-full">
+    96→      <path d="M36 14h28v10c0 10-6 17-14 17s-14-7-14-17z" fill="url(#streak-g)" stroke="#fff3c4" strokeWidth="2" />
+    97→      <path d="M36 16h-8c0 8 3 12 9 13M64 16h8c0 8-3 12-9 13" fill="none" stroke="#fff3c4" strokeWidth="2.6" />
+    98→      <path d="M47 41h6v6h-6z" fill="#c47f08" />
+    99→      <rect x="40" y="47" width="20" height="6" rx="2.5" fill="url(#streak-g)" />
+   100→      <path d="M50 20l1.8 3.8 4.2.6-3 2.9.7 4.1-3.7-2-3.7 2 .7-4.1-3-2.9 4.2-.6z" fill="#8a5a08" />
+   101→      <defs>
+   102→        <linearGradient id="streak-g" x1="0" y1="0" x2="0" y2="1">
+   103→          <stop offset="0" stopColor="#ffe08a" />
+   104→          <stop offset="1" stopColor="#e09b1a" />
+   105→        </linearGradient>
+   106→      </defs>
+   107→    </svg>
+   108→  )
+   109→}
+   110→
+   111→/** Token cluster — TEAM UP tile. */
+   112→function ArtTeam() {
+   113→  return (
+   114→    <svg viewBox="0 0 100 62" className="h-full w-full">
+   115→      <circle cx="38" cy="22" r="11" fill="#e5453c" stroke="#fff" strokeWidth="2.4" />
+   116→      <circle cx="60" cy="22" r="11" fill="#f7c331" stroke="#fff" strokeWidth="2.4" />
+   117→      <circle cx="38" cy="42" r="11" fill="#46a848" stroke="#fff" strokeWidth="2.4" />
+   118→      <circle cx="60" cy="42" r="11" fill="#2a8ee0" stroke="#fff" strokeWidth="2.4" />
+   119→      <path d="M46 32h6m-2-2 2 2-2 2" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+   120→    </svg>
+   121→  )
+   122→}
+   123→
+   124→/** "4" + tokens — 4 PLAYER tile. */
+   125→function Art4P() {
+   126→  return (
+   127→    <svg viewBox="0 0 100 62" className="h-full w-full">
+   128→      <text x="30" y="46" textAnchor="middle" fontFamily="var(--font-lilita), Arial Rounded MT Bold, sans-serif" fontSize="40" fontWeight="900" fill="#f7c331" stroke="#fff" strokeWidth="4" paintOrder="stroke">4</text>
+   129→      <circle cx="58" cy="20" r="8.5" fill="#e5453c" stroke="#fff" strokeWidth="2.2" />
+   130→      <circle cx="74" cy="20" r="8.5" fill="#46a848" stroke="#fff" strokeWidth="2.2" />
+   131→      <circle cx="58" cy="38" r="8.5" fill="#2a8ee0" stroke="#fff" strokeWidth="2.2" />
+   132→      <circle cx="74" cy="38" r="8.5" fill="#f7c331" stroke="#fff" strokeWidth="2.2" />
+   133→    </svg>
+   134→  )
+   135→}
+   136→
+   137→/** Mini 4-color board preview for the quick table tiles. */
+   138→function MiniBoard() {
+   139→  return (
+   140→    <svg viewBox="0 0 64 64" className="h-full w-full">
+   141→      <rect x="2" y="2" width="60" height="60" rx="12" fill="#fdf6e6" />
+   142→      <rect x="7" y="7" width="20" height="20" rx="5" fill="#e5453c" />
+   143→      <rect x="37" y="7" width="20" height="20" rx="5" fill="#46a848" />
+   144→      <rect x="37" y="37" width="20" height="20" rx="5" fill="#f7c331" />
+   145→      <rect x="7" y="37" width="20" height="20" rx="5" fill="#2a8ee0" />
+   146→      <rect x="27" y="7" width="10" height="8" rx="2" fill="#f1f5f9" />
+   147→      <rect x="27" y="49" width="10" height="8" rx="2" fill="#f1f5f9" />
+   148→      <rect x="7" y="27" width="8" height="10" rx="2" fill="#f1f5f9" />
+   149→      <rect x="49" y="27" width="8" height="10" rx="2" fill="#f1f5f9" />
+   150→      <rect x="25" y="25" width="14" height="14" rx="3" fill="#f7c331" />
+   151→    </svg>
+   152→  )
+   153→}
+   154→
+   155→// ---------- shared atoms ----------
+   156→
+   157→function CurrencyChip({
+   158→  value,
+   159→  icon,
+   160→  onClick,
+   161→  label,
+   162→  valueClass,
+   163→}: {
+   164→  value: string
+   165→  icon: React.ReactNode
+   166→  onClick?: () => void
+   167→  label: string
+   168→  valueClass?: string
+   169→}) {
+   170→  return (
+   171→    <motion.button
+   172→      whileTap={onClick ? { scale: 0.94 } : undefined}
+   173→      onClick={onClick}
+   174→      className="ls-lobby-chip flex items-center gap-1 rounded-full py-[3px] pl-1.5 pr-1"
+   175→      aria-label={label}
+   176→      title={label}
+   177→    >
+   178→      {icon}
+   179→      <span className={`ls-font text-[11px] leading-none ${valueClass ?? 'text-amber-100'}`}>{value}</span>
+   180→      {onClick && (
+   181→        <span
+   182→          className="grid h-4 w-4 place-items-center rounded-full text-[11px] font-black leading-none text-white"
+   183→          style={{ background: 'linear-gradient(180deg,#6cc257,#327c25)', boxShadow: '0 1px 3px rgba(0,0,0,0.4)' }}
+   184→        >
+   185→          +
+   186→        </span>
+   187→      )}
+   188→    </motion.button>
+   189→  )
+   190→}
+   191→
+   192→function RibbonLabel({ children, tone = 'gold' }: { children: React.ReactNode; tone?: 'gold' | 'violet' }) {
+   193→  return (
+   194→    <span
+   195→      className={`ls-font inline-flex items-center gap-1 rounded-md px-2 py-[3px] text-[9px] leading-none tracking-wide ${
+   196→        tone === 'gold' ? 'text-amber-100' : 'text-violet-100'
+   197→      }`}
+   198→      style={{
+   199→        background: tone === 'gold' ? 'linear-gradient(180deg, rgba(70,20,10,0.85), rgba(40,10,5,0.85))' : 'rgba(28,8,52,0.85)',
+   200→        boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12)',
+   201→      }}
+   202→    >
+   203→      {children}
+   204→    </span>
+   205→  )
+   206→}
+   207→
+   208→// ---------- main screen ----------
+   209→
+   210→export default function MenuScreen() {
+   211→  const profile = useLudo((s) => s.profile)
+   212→  const hydrated = useLudo((s) => s.hydrated)
+   213→  const updateProfile = useLudo((s) => s.updateProfile)
+   214→  const refillCoins = useLudo((s) => s.refillCoins)
+   215→  const claimDaily = useLudo((s) => s.claimDaily)
+   216→  const daily = useLudo((s) => s.daily)
+   217→  const startLocalGame = useLudo((s) => s.startLocalGame)
+   218→  const onlineConnect = useLudo((s) => s.onlineConnect)
+   219→  const onlineStatus = useLudo((s) => s.onlineStatus)
+   220→  const onlineError = useLudo((s) => s.onlineError)
+   221→  const onlineQuick = useLudo((s) => s.onlineQuick)
+   222→  const onlineCreate = useLudo((s) => s.onlineCreate)
+   223→  const onlineJoin = useLudo((s) => s.onlineJoin)
+   224→  const soundOn = useLudo((s) => s.soundOn)
+   225→  const toggleSound = useLudo((s) => s.toggleSound)
+   226→
+   227→  const [tab, setTab] = useState<LobbyTab>('home')
+   228→  const [sheet, setSheet] = useState<SheetKind>(null)
+   229→  const [sheetMode, setSheetMode] = useState<GameMode>('classic')
+   230→  const [stake, setStake] = useState<number>(100)
+   231→  const [joinCode, setJoinCode] = useState('')
+   232→  const [busy, setBusy] = useState(false)
+   233→  const [eventsOpen, setEventsOpen] = useState(false)
+   234→  const [settingsOpen, setSettingsOpen] = useState(false)
+   235→  const [copied, setCopied] = useState(false)
+   236→  const [soonFlash, setSoonFlash] = useState<string | null>(null)
+   237→
+   238→  // pre-warm online connection so quick match feels instant
+   239→  useEffect(() => {
+   240→    onlineConnect()
+   241→  }, [onlineConnect])
+   242→
+   243→  const lvl = levelFromWins(profile.wins)
+   244→  const dailyClaimable = daily?.lastClaim !== new Date().toLocaleDateString('en-CA')
+   245→  const onlineFriends = BOT_FRIENDS.filter((f) => f.status !== 'offline').length
+   246→  const unlockedAchievements = ACHIEVEMENTS.filter(
+   247→    (a) => a.progress({ wins: profile.wins, losses: profile.losses, coins: profile.coins, gems: profile.gems }) >= a.goal
+   248→  ).length
+   249→
+   250→  const totalGames = profile.wins + profile.losses
+   251→  const winRate = totalGames > 0 ? Math.round((profile.wins / totalGames) * 100) : 0
+   252→
+   253→  function flashSoon(name: string) {
+   254→    setSoonFlash(name)
+   255→    setTimeout(() => setSoonFlash(null), 1400)
+   256→  }
+   257→
+   258→  function practicePlayers() {
+   259→    const botAvatars = AVATARS.filter((a) => a !== profile.avatar)
+   260→    const botNames = ['Rocky', 'Zuby', 'Lola']
+   261→    return [
+   262→      { name: profile.name, avatar: profile.avatar, isBot: false },
+   263→      ...botNames.map((n, i) => ({ name: n, avatar: botAvatars[(i * 5) % botAvatars.length], isBot: true })),
+   264→    ]
+   265→  }
+   266→
+   267→  function startVsComputer(gameMode: GameMode, playerCount: 2 | 4, useStake: number) {
+   268→    const botAvatars = AVATARS.filter((a) => a !== profile.avatar)
+   269→    const botNames = ['Rocky', 'Zuby', 'Lola', 'Kiki']
+   270→    const bots = playerCount === 2 ? 1 : 3
+   271→    const players = [{ name: profile.name, avatar: profile.avatar, isBot: false }]
+   272→    for (let i = 0; i < bots; i++) {
+   273→      players.push({ name: botNames[i], avatar: botAvatars[(i * 5) % botAvatars.length], isBot: true })
+   274→    }
+   275→    startLocalGame({ mode: gameMode, stake: useStake, players })
+   276→    setSheet(null)
+   277→  }
+   278→
+   279→  function startPass(gameMode: GameMode, playerCount: 2 | 4, useStake: number) {
+   280→    const names = ['Player 2', 'Player 3', 'Player 4']
+   281→    const players = [
+   282→      { name: profile.name, avatar: profile.avatar, isBot: false },
+   283→      ...Array.from({ length: playerCount - 1 }, (_, i) => ({
+   284→        name: names[i],
+   285→        avatar: AVATARS[(i * 4 + 2) % AVATARS.length],
+   286→        isBot: false,
+   287→      })),
+   288→    ]
+   289→    startLocalGame({ mode: gameMode, stake: useStake, players })
+   290→    setSheet(null)
+   291→  }
+   292→
+   293→  /** One-tap quick table from the top row: online if affordable, else free vs computer. */
+   294→  function quickTable(gameMode: GameMode, useStake: number) {
+   295→    if (busy) return
+   296→    if (profile.coins >= useStake) {
+   297→      setBusy(true)
+   298→      onlineQuick(useStake, gameMode)
+   299→      setTimeout(() => setBusy(false), 2500)
+   300→    } else {
+   301→      startVsComputer(gameMode, 4, 0)
+   302→    }
+   303→  }
+   304→
+   305→  /** Play online from a mode sheet. 2 seats = dedicated room (share code / add bot); 4 seats = quick match. */
+   306→  function playOnlineFromSheet() {
+   307→    if (busy) return
+   308→    setBusy(true)
+   309→    if (sheet === 'table2') {
+   310→      onlineCreate({ stake, mode: sheetMode, seats: 2, botFill: false })
+   311→    } else {
+   312→      onlineQuick(stake, sheetMode)
+   313→    }
+   314→    setTimeout(() => setBusy(false), 2500)
+   315→    setSheet(null)
+   316→  }
+   317→
+   318→  function copyInvite(code: string) {
+   319→    if (!code) return
+   320→    navigator.clipboard?.writeText(code).then(() => {
+   321→      setCopied(true)
+   322→      setTimeout(() => setCopied(false), 1400)
+   323→    }).catch(() => undefined)
+   324→  }
+   325→
+   326→  const canPlay = profile.coins >= stake
+   327→  const seats: 2 | 4 = sheet === 'table2' ? 2 : 4
+   328→
+   329→  if (!hydrated) {
+   330→    return (
+   331→      <div className="ls-bg-lobby fixed inset-0 grid place-items-center">
+   332→        <div className="flex flex-col items-center gap-3">
+   333→          <LudoLogo />
+   334→          <Loader2 className="h-6 w-6 animate-spin text-fuchsia-200" />
+   335→        </div>
+   336→      </div>
+   337→    )
+   338→  }
+   339→
+   340→  return (
+   341→    <div className="ls-bg-lobby fixed inset-0 z-0 overflow-hidden">
+   342→      {/* desktop ambience outside the phone column */}
+   343→      <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(60% 55% at 50% 42%, rgba(255,255,255,0.10) 0%, transparent 60%)' }} />
+   344→
+   345→      <div className="relative mx-auto flex h-full w-full max-w-[430px] flex-col">
+   346→
+   347→        {/* ============ TOP BAR (currency + settings) ============ */}
+   348→        <div className="flex items-center gap-1.5 px-2.5 pt-2.5">
+   349→          <CurrencyChip
+   350→            value={`${Math.min(profile.wins, 50)}/50`}
+   351→            icon={<Star size={14} fill="#ffd75e" color="#e09b1a" />}
+   352→            onClick={() => setSheet('ranks')}
+   353→            label={`Win stars ${profile.wins}/50 — tap for leaderboard`}
+   354→          />
+   355→          <CurrencyChip
+   356→            value={profile.coins.toLocaleString()}
+   357→            icon={<CoinIcon size={15} />}
+   358→            onClick={refillCoins}
+   359→            label={`Coins ${profile.coins} — tap for free refill`}
+   360→          />
+   361→          <CurrencyChip
+   362→            value={profile.gems.toLocaleString()}
+   363→            icon={<GemIcon size={15} />}
+   364→            onClick={() => setTab('shop')}
+   365→            label={`Gems ${profile.gems} — tap for the shop`}
+   366→            valueClass="text-teal-100"
+   367→          />
+   368→          <div className="ml-auto flex items-center gap-1.5">
+   369→            {/* connection dot */}
+   370→            <span
+   371→              className="h-2 w-2 rounded-full ring-2 ring-white/20"
+   372→              style={{ background: onlineStatus === 'connected' || onlineStatus === 'idle' || onlineStatus === 'lobby' ? '#4ade80' : '#f6c453' }}
+   373→              title={onlineStatus === 'connected' ? 'Server online' : 'Connecting...'}
+   374→            />
+   375→            {/* settings */}
+   376→            <div className="relative">
+   377→              <motion.button
+   378→                whileTap={{ scale: 0.9 }}
+   379→                onClick={() => { setSettingsOpen((o) => !o); setEventsOpen(false) }}
+   380→                className="ls-lobby-chip grid h-8 w-8 place-items-center rounded-full text-fuchsia-100"
+   381→                aria-label="Settings"
+   382→              >
+   383→                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+   384→                  <circle cx="12" cy="12" r="3" />
+   385→                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+   386→                </svg>
+   387→              </motion.button>
+   388→              <AnimatePresence>
+   389→                {settingsOpen && (
+   390→                  <motion.div
+   391→                    initial={{ opacity: 0, y: -8, scale: 0.96 }}
+   392→                    animate={{ opacity: 1, y: 0, scale: 1 }}
+   393→                    exit={{ opacity: 0, y: -8, scale: 0.96 }}
+   394→                    className="ls-sheet absolute right-0 top-10 z-50 w-52 rounded-2xl p-2"
+   395→                  >
+   396→                    <button
+   397→                      onClick={toggleSound}
+   398→                      className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm text-fuchsia-50 transition hover:bg-white/10"
+   399→                    >
+   400→                      Sound effects
+   401→                      {soundOn ? <Volume2 size={15} className="text-emerald-300" /> : <VolumeX size={15} className="text-slate-400" />}
+   402→                    </button>
+   403→                    <button
+   404→                      onClick={() => { setTab('collections'); setSettingsOpen(false) }}
+   405→                      className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm text-fuchsia-50 transition hover:bg-white/10"
+   406→                    >
+   407→                      Edit profile <ChevronRight size={14} className="text-fuchsia-200" />
+   408→                    </button>
+   409→                  </motion.div>
+   410→                )}
+   411→              </AnimatePresence>
+   412→            </div>
+   413→          </div>
+   414→        </div>
+   415→
+   416→        {/* ============ PLAYER ROW (avatar + level + quick tables) ============ */}
+   417→        <div className="flex items-center gap-2 px-2.5 pt-2">
+   418→          <button onClick={() => setTab('collections')} className="relative shrink-0" aria-label="Open profile">
+   419→            <AvatarRing avatar={profile.avatar} size={46} />
+   420→            <span
+   421→              className="ls-font absolute -bottom-1 -right-1.5 grid h-[22px] min-w-[22px] place-items-center rounded-full px-1 text-[10px] text-white"
+   422→              style={{ background: 'linear-gradient(180deg,#ff9d3c,#e8720c)', boxShadow: '0 2px 5px rgba(0,0,0,0.45), 0 0 0 2.5px rgba(90,15,80,0.9)' }}
+   423→            >
+   424→              {lvl.level}
+   425→            </span>
+   426→          </button>
+   427→          <div className="min-w-0 w-[92px] shrink-0">
+   428→            <p className="ls-font truncate text-sm leading-tight text-white">{profile.name}</p>
+   429→            <span
+   430→              className="ls-font mt-1 inline-flex items-center gap-1 rounded-md px-1.5 py-[2px] text-[9px] leading-none text-white"
+   431→              style={{ background: 'linear-gradient(180deg,#ff9d3c,#e8720c)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4)' }}
+   432→            >
+   433→              <Flag size={9} fill="#fff" /> Level {lvl.level}
+   434→            </span>
+   435→          </div>
+   436→
+   437→          {/* quick tables */}
+   438→          <div className="grid flex-1 grid-cols-3 gap-1.5">
+   439→            {([
+   440→              { mode: 'classic' as GameMode, stake: 100, caption: '100' },
+   441→              { mode: 'quick' as GameMode, stake: 500, caption: '500' },
+   442→              { mode: 'master' as GameMode, stake: 1000, caption: 'BIG WIN' },
+   443→            ]).map((t) => {
+   444→              const afford = profile.coins >= t.stake
+   445→              return (
+   446→                <motion.button
+   447→                  key={t.mode}
+   448→                  whileTap={{ scale: 0.93 }}
+   449→                  onClick={() => quickTable(t.mode, t.stake)}
+   450→                  className="ls-table-tile flex flex-col items-center gap-0.5 rounded-xl p-1"
+   451→                  aria-label={`${t.mode} table, ${t.stake} coins entry`}
+   452→                >
+   453→                  <div className="h-[30px] w-full">
+   454→                    <ModeIllustration kind={t.mode} size={30} />
+   455→                  </div>
+   456→                  <RibbonLabel>
+   457→                    {t.caption === 'BIG WIN' ? <><Zap size={8} /> BIG WIN</> : <><CoinIcon size={9} /> {t.caption}</>}
+   458→                    {!afford && <Lock size={8} />}
+   459→                  </RibbonLabel>
+   460→                </motion.button>
+   461→              )
+   462→            })}
+   463→          </div>
+   464→        </div>
+   465→
+   466→        {/* ============ LEFT RAIL (events / ranks / clubs) ============ */}
+   467→        <div className="absolute left-1.5 top-[104px] z-30 flex flex-col items-center gap-2">
+   468→          <div className="relative">
+   469→            <motion.button
+   470→              whileTap={{ scale: 0.9 }}
+   471→              onClick={() => { setEventsOpen((o) => !o); setSettingsOpen(false) }}
+   472→              className="ls-rail-btn grid h-10 w-10 place-items-center rounded-full text-amber-200"
+   473→              aria-label="Events"
+   474→            >
+   475→              <Film size={18} />
+   476→              <span className="ls-font absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-rose-500 px-1 text-[8px] text-white ring-2 ring-[#7c1f6e]">3</span>
+   477→            </motion.button>
+   478→            <AnimatePresence>
+   479→              {eventsOpen && (
+   480→                <motion.div
+   481→                  initial={{ opacity: 0, x: -8 }}
+   482→                  animate={{ opacity: 1, x: 0 }}
+   483→                  exit={{ opacity: 0, x: -8 }}
+   484→                  className="ls-sheet absolute left-12 top-0 z-50 w-64 rounded-2xl p-2.5"
+   485→                >
+   486→                  <p className="ls-font mb-1.5 text-xs text-amber-200">EVENTS</p>
+   487→                  {EVENTS.map((e) => (
+   488→                    <div key={e.title} className="flex items-start gap-2 rounded-xl px-2 py-1.5 hover:bg-white/5">
+   489→                      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-white/10 text-sm">{e.icon}</span>
+   490→                      <div>
+   491→                        <p className="ls-font text-[11px] text-white">{e.title}</p>
+   492→                        <p className="text-[9px] leading-snug text-fuchsia-100/60">{e.text}</p>
+   493→                      </div>
+   494→                    </div>
+   495→                  ))}
+   496→                </motion.div>
+   497→              )}
+   498→            </AnimatePresence>
+   499→          </div>
+   500→
+   501→          <motion.button
+   502→            whileTap={{ scale: 0.9 }}
+   503→            onClick={() => setSheet('ranks')}
+   504→            className="ls-rail-btn grid h-10 w-10 place-items-center rounded-full text-amber-200"
+   505→            aria-label="Leaderboard"
+   506→          >
+   507→            <Trophy size={18} />
+   508→          </motion.button>
+   509→
+   510→          <motion.button
+   511→            whileTap={{ scale: 0.9 }}
+   512→            onClick={() => setTab('friends')}
+   513→            className="flex flex-col items-center gap-0.5"
+   514→            aria-label="Clubs and friends"
+   515→          >
+   516→            <span className="ls-rail-btn relative grid h-11 w-11 place-items-center rounded-2xl text-fuchsia-100">
+   517→              <Users size={19} />
+   518→              {onlineFriends > 0 && (
+   519→                <span className="ls-font absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-rose-500 px-1 text-[8px] text-white ring-2 ring-[#7c1f6e]">{onlineFriends}</span>
+   520→              )}
+   521→            </span>
+   522→            <span className="ls-font text-[8px] tracking-widest text-fuchsia-100/80">CLUBS</span>
+   523→          </motion.button>
+   524→        </div>
+   525→
+   526→        {/* ============ MAIN (watermark + play tiles) ============ */}
+   527→        <main className="relative flex min-h-0 flex-1 flex-col px-3">
+   528→          {/* watermark */}
+   529→          <div className="pointer-events-none absolute inset-0 grid place-items-center" aria-hidden>
+   530→            <div className="flex select-none flex-col items-center" style={{ opacity: 0.15 }}>
+   531→              <Crown size={26} color="#ffffff" fill="#ffffff" />
+   532→              <span className="ls-font text-[58px] leading-[0.95] text-white">LUDO</span>
+   533→              <span className="ls-font text-lg leading-none tracking-[0.42em] text-white" style={{ marginRight: '-0.42em' }}>STAR</span>
+   534→            </div>
+   535→          </div>
+   536→
+   537→          <div className="flex-1" />
+   538→
+   539→          {/* big tiles */}
+   540→          <div className="relative z-10 grid grid-cols-2 gap-2.5">
+   541→            <motion.button
+   542→              whileTap={{ scale: 0.96 }}
+   543→              onClick={() => { setSheet('table2'); setSheetMode('classic') }}
+   544→              className="ls-tile-gold relative flex h-[min(36vw,20vh,148px)] flex-col overflow-hidden rounded-2xl p-1.5"
+   545→              aria-label="Play 2 player"
+   546→            >
+   547→              <motion.span
+   548→                className="pointer-events-none absolute -right-6 -top-10 h-24 w-24 rounded-full bg-white/25 blur-2xl"
+   549→                animate={{ scale: [1, 1.25, 1] }}
+   550→                transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
+   551→              />
+   552→              <div className="min-h-0 flex-1"><Art2P /></div>
+   553→              <span className="ls-font pb-1 text-center text-[15px] leading-none text-white" style={{ textShadow: '0 2px 0 rgba(150,80,0,0.7)' }}>2 PLAYER</span>
+   554→            </motion.button>
+   555→
+   556→            <motion.button
+   557→              whileTap={{ scale: 0.96 }}
+   558→              onClick={() => setSheet('private')}
+   559→              className="ls-tile-purple relative flex h-[min(36vw,20vh,148px)] flex-col overflow-hidden rounded-2xl p-1.5"
+   560→              aria-label="Open private table"
+   561→            >
+   562→              <span className="absolute right-1.5 top-1.5 grid h-5 w-5 place-items-center rounded-full bg-black/35 text-amber-200" title="Invite with a code">
+   563→                <KeyRound size={11} />
+   564→              </span>
+   565→              <div className="min-h-0 flex-1"><ArtPrivate /></div>
+   566→              <span className="ls-font pb-1 text-center text-[13px] leading-none text-white" style={{ textShadow: '0 2px 0 rgba(40,10,90,0.7)' }}>PRIVATE TABLE</span>
+   567→            </motion.button>
+   568→          </div>
+   569→
+   570→          {/* small tiles */}
+   571→          <div className="relative z-10 mt-2.5 grid grid-cols-4 gap-2 pb-1.5">
+   572→            <motion.button
+   573→              whileTap={{ scale: 0.94 }}
+   574→              onClick={() => flashSoon('VIP Club')}
+   575→              className="ls-tile-purple relative flex h-[min(19vw,12vh,84px)] flex-col items-center justify-center overflow-hidden rounded-xl p-1 opacity-95"
+   576→              aria-label="VIP — coming soon"
+   577→            >
+   578→              <Lock size={11} className="absolute right-1.5 top-1.5 text-amber-200/90" />
+   579→              <div className="min-h-0 w-full flex-1"><ArtVip /></div>
+   580→            </motion.button>
+   581→
+   582→            <motion.button
+   583→              whileTap={{ scale: 0.94 }}
+   584→              onClick={() => setTab('chest')}
+   585→              className="ls-tile-purple relative flex h-[min(19vw,12vh,84px)] flex-col items-center justify-center overflow-hidden rounded-xl p-1"
+   586→              aria-label="Streak stars — daily rewards"
+   587→            >
+   588→              <div className="min-h-0 w-full flex-1"><ArtStreak /></div>
+   589→              <span className="ls-font rounded-md bg-black/40 px-1 text-[7px] leading-[1.4] text-amber-100">LEVEL 7</span>
+   590→            </motion.button>
+   591→
+   592→            <motion.button
+   593→              whileTap={{ scale: 0.94 }}
+   594→              onClick={() => flashSoon('Team Up')}
+   595→              className="ls-tile-purple relative flex h-[min(19vw,12vh,84px)] flex-col items-center justify-center overflow-hidden rounded-xl p-1 opacity-95"
+   596→              aria-label="Team up — coming soon"
+   597→            >
+   598→              <Lock size={11} className="absolute right-1.5 top-1.5 text-amber-200/90" />
+   599→              <div className="min-h-0 w-full flex-1"><ArtTeam /></div>
+   600→            </motion.button>
+   601→
+   602→            <motion.button
+   603→              whileTap={{ scale: 0.94 }}
+   604→              onClick={() => { setSheet('table4'); setSheetMode('classic') }}
+   605→              className="ls-tile-purple relative flex h-[min(19vw,12vh,84px)] flex-col items-center justify-center overflow-hidden rounded-xl p-1"
+   606→              aria-label="Play 4 player"
+   607→            >
+   608→              <div className="min-h-0 w-full flex-1"><Art4P /></div>
+   609→            </motion.button>
+   610→          </div>
+   611→
+   612→          {soonFlash && (
+   613→            <motion.div
+   614→              initial={{ opacity: 0, y: 8 }}
+   615→              animate={{ opacity: 1, y: 0 }}
+   616→              exit={{ opacity: 0 }}
+   617→              className="ls-sheet absolute bottom-28 left-1/2 z-40 -translate-x-1/2 rounded-full px-4 py-2 text-xs text-white"
+   618→            >
+   619→              {soonFlash} — coming soon!
+   620→            </motion.div>
+   621→          )}
+   622→        </main>
+   623→
+   624→        {/* ============ BOTTOM NAV ============ */}
+   625→        <nav className="ls-nav-bar relative z-40 border-t border-white/10">
+   626→          <div className="mx-auto grid w-full max-w-[430px] grid-cols-5 px-1.5">
+   627→            {([
+   628→              { id: 'shop', icon: <ShoppingCart size={20} />, label: 'Shop' },
+   629→              { id: 'friends', icon: <Users size={20} />, label: 'Friends' },
+   630→              { id: 'home', icon: <HomeIcon size={24} />, label: 'Home', raised: true },
+   631→              { id: 'collections', icon: <LayoutGrid size={20} />, label: 'Collections', badge: unlockedAchievements },
+   632→              { id: 'chest', icon: <Gift size={20} />, label: 'Chest', badge: dailyClaimable ? 1 : undefined },
+   633→            ] as Array<{ id: LobbyTab; icon: React.ReactNode; label: string; raised?: boolean; badge?: number }>).map((item) => {
+   634→              const active = tab === item.id
+   635→              if (item.raised) {
+   636→                return (
+   637→                  <button key={item.id} onClick={() => setTab(item.id)} className="relative flex flex-col items-center" aria-current={active ? 'page' : undefined}>
+   638→                    <motion.span
+   639→                      whileTap={{ scale: 0.9 }}
+   640→                      className="ls-tile-purple -mt-6 grid h-12 w-14 place-items-center rounded-2xl text-white"
+   641→                      style={{ boxShadow: '0 6px 0 #3b1580, 0 12px 20px rgba(20,5,50,0.55), inset 0 2px 0 rgba(255,255,255,0.35)' }}
+   642→                    >
+   643→                      {item.icon}
+   644→                    </motion.span>
+   645→                    <span className={`ls-font mt-0.5 text-[9px] ${active ? 'text-white' : 'text-fuchsia-100/70'}`}>{item.label}</span>
+   646→                  </button>
+   647→                )
+   648→              }
+   649→              return (
+   650→                <button key={item.id} onClick={() => setTab(item.id)} className="relative flex flex-col items-center gap-0.5 py-1.5" aria-current={active ? 'page' : undefined}>
+   651→                  <motion.span whileTap={{ scale: 0.85 }} className={`relative grid h-8 w-8 place-items-center rounded-xl transition ${active ? 'bg-white/15 text-white' : 'text-fuchsia-100/55'}`}>
+   652→                    {item.icon}
+   653→                    {item.badge ? (
+   654→                      <span className="ls-font absolute -right-1.5 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-rose-500 px-1 text-[8px] text-white ring-2 ring-[#2b0a4a]">{item.badge}</span>
+   655→                    ) : null}
+   656→                  </motion.span>
+   657→                  <span className={`ls-font text-[9px] ${active ? 'text-white' : 'text-fuchsia-100/50'}`}>{item.label}</span>
+   658→                </button>
+   659→              )
+   660→            })}
+   661→          </div>
+   662→        </nav>
+   663→      </div>
+   664→
+   665→      {/* ============ NON-HOME TAB PANELS (inside fixed frame) ============ */}
+   666→      <AnimatePresence>
+   667→        {tab !== 'home' && (
+   668→          <motion.div
+   669→            key={tab}
+   670→            initial={{ opacity: 0, y: 16 }}
+   671→            animate={{ opacity: 1, y: 0 }}
+   672→            exit={{ opacity: 0, y: 16 }}
+   673→            transition={{ duration: 0.18 }}
+   674→            className="absolute inset-0 z-30 mx-auto flex w-full max-w-[430px] flex-col px-3 pb-[86px] pt-3"
+   675→          >
+   676→            <div className="mb-2 flex items-center justify-between">
+   677→              <h2 className="ls-font text-lg text-white">
+   678→                {tab === 'shop' && 'SHOP'}
+   679→                {tab === 'friends' && 'FRIENDS'}
+   680→                {tab === 'collections' && 'COLLECTIONS'}
+   681→                {tab === 'chest' && 'CHEST'}
+   682→              </h2>
+   683→              <button onClick={() => setTab('home')} className="ls-lobby-chip grid h-8 w-8 place-items-center rounded-full text-white" aria-label="Close">
+   684→                <ChevronRight size={16} className="rotate-90" />
+   685→              </button>
+   686→            </div>
+   687→            <div className="ls-scroll ls-sheet min-h-0 flex-1 overflow-y-auto rounded-3xl p-3">
+   688→
+   689→              {/* ---- SHOP ---- */}
+   690→              {tab === 'shop' && (
+   691→                <div className="space-y-2.5">
+   692→                  <motion.button
+   693→                    whileTap={{ scale: 0.97 }}
+   694→                    onClick={refillCoins}
+   695→                    className="ls-tile-gold flex w-full items-center gap-3 rounded-2xl p-3 text-left"
+   696→                  >
+   697→                    <CoinIcon size={38} animated />
+   698→                    <div className="flex-1">
+   699→                      <p className="ls-font text-sm text-white">Free coin refill</p>
+   700→                      <p className="text-[10px] text-amber-100/80">Tap anytime — instant +{FREE_REFILL.toLocaleString()} coins</p>
+   701→                    </div>
+   702→                    <span className="ls-font rounded-xl bg-black/25 px-3 py-1.5 text-xs text-white">+{FREE_REFILL.toLocaleString()}</span>
+   703→                  </motion.button>
+   704→
+   705→                  <div className="ls-tile-purple flex items-center gap-3 rounded-2xl p-3">
+   706→                    <GemIcon size={34} animated />
+   707→                    <div className="flex-1">
+   708→                      <p className="ls-font text-sm text-white">Gems</p>
+   709→                      <p className="text-[10px] text-fuchsia-100/75">Earn 2 gems for every online win</p>
+   710→                    </div>
+   711→                    <span className="ls-font text-sm text-teal-100">{profile.gems.toLocaleString()}</span>
+   712→                  </div>
+   713→
+   714→                  <div className="ls-panel rounded-2xl p-3">
+   715→                    <p className="ls-font text-xs text-amber-200">MORE WAYS TO EARN</p>
+   716→                    <ul className="mt-1.5 space-y-1 text-[11px] leading-relaxed text-fuchsia-50/80">
+   717→                      <li className="flex items-center gap-2"><Gift size={12} className="text-amber-200" /> Daily chest — open the Chest tab every day</li>
+   718→                      <li className="flex items-center gap-2"><Trophy size={12} className="text-amber-200" /> Win online tables — pot goes to the champion</li>
+   719→                      <li className="flex items-center gap-2"><Star size={12} className="text-amber-200" /> Streak Stars — bigger rewards every day in a row</li>
+   720→                    </ul>
+   721→                  </div>
+   722→                </div>
+   723→              )}
+   724→
+   725→              {/* ---- FRIENDS ---- */}
+   726→              {tab === 'friends' && (
+   727→                <div>
+   728→                  <p className="mb-2 text-[11px] text-fuchsia-100/70">{onlineFriends} friends online now</p>
+   729→                  <div className="space-y-2">
+   730→                    {BOT_FRIENDS.map((f) => {
+   731→                      const statusColor = f.status === 'online' ? '#4ade80' : f.status === 'in-game' ? '#f6c453' : '#64748b'
+   732→                      return (
+   733→                        <div key={f.name} className="ls-panel flex items-center gap-2.5 rounded-2xl px-2.5 py-2">
+   734→                          <div className="relative">
+   735→                            <AvatarRing avatar={f.avatar} size={36} />
+   736→                            <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-[#1b0630]" style={{ background: statusColor }} />
+   737→                          </div>
+   738→                          <div className="min-w-0 flex-1">
+   739→                            <p className="ls-font truncate text-xs text-white">{f.name}</p>
+   740→                            <p className="text-[9px] text-fuchsia-100/60">
+   741→                              {f.status === 'in-game' ? `Playing at ${f.table}` : f.status === 'online' ? `Level ${f.level} · Online` : 'Offline'}
+   742→                            </p>
+   743→                          </div>
+   744→                          {f.status !== 'offline' && (
+   745→                            <button
+   746→                              onClick={() => startVsComputer('classic', 4, 0)}
+   747→                              className="ls-btn ls-btn-green ls-font flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[10px] text-white"
+   748→                            >
+   749→                              <Zap size={10} /> PLAY
+   750→                            </button>
+   751→                          )}
+   752→                        </div>
+   753→                      )
+   754→                    })}
+   755→                  </div>
+   756→                  <p className="mt-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[10px] leading-relaxed text-fuchsia-100/60">
+   757→                    Open a Private Table from Home and share the code to invite anyone.
+   758→                  </p>
+   759→                </div>
+   760→              )}
+   761→
+   762→              {/* ---- COLLECTIONS (profile + achievements) ---- */}
+   763→              {tab === 'collections' && (
+   764→                <div className="space-y-3">
+   765→                  <div className="ls-panel rounded-2xl p-3.5">
+   766→                    <div className="flex items-center gap-3.5">
+   767→                      <div className="relative">
+   768→                        <AvatarRing avatar={profile.avatar} size={58} />
+   769→                        <span
+   770→                          className="ls-font absolute -bottom-1 -right-1.5 grid h-[22px] min-w-[22px] place-items-center rounded-full px-1 text-[10px] text-white"
+   771→                          style={{ background: 'linear-gradient(180deg,#ff9d3c,#e8720c)', boxShadow: '0 2px 5px rgba(0,0,0,0.45), 0 0 0 2.5px #1b0630' }}
+   772→                        >
+   773→                          {lvl.level}
+   774→                        </span>
+   775→                      </div>
+   776→                      <div className="min-w-0 flex-1">
+   777→                        <input
+   778→                          value={profile.name}
+   779→                          onChange={(e) => updateProfile({ name: e.target.value.slice(0, 14) })}
+   780→                          className="ls-glass-input ls-font w-full rounded-xl px-3 py-2 text-sm font-bold text-white"
+   781→                          aria-label="Your name"
+   782→                          maxLength={14}
+   783→                          placeholder="Your name"
+   784→                        />
+   785→                        <p className="ls-font mt-1.5 text-[10px] text-amber-200/85">LV {lvl.level} · {rankTitle(lvl.level)}</p>
+   786→                        <p className="mt-0.5 text-[9px] text-fuchsia-100/60">{lvl.xpNow}/{lvl.xpNeed} wins to level {lvl.level + 1}</p>
+   787→                      </div>
+   788→                    </div>
+   789→                    <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+   790→                      {[
+   791→                        { label: 'Wins', value: profile.wins, tone: 'text-emerald-300' },
+   792→                        { label: 'Losses', value: profile.losses, tone: 'text-rose-300' },
+   793→                        { label: 'Win rate', value: `${winRate}%`, tone: 'text-amber-200' },
+   794→                      ].map((s) => (
+   795→                        <div key={s.label} className="ls-panel rounded-xl py-2">
+   796→                          <p className={`ls-font text-base ${s.tone}`}>{s.value}</p>
+   797→                          <p className="text-[8px] uppercase tracking-wide text-fuchsia-100/50">{s.label}</p>
+   798→                        </div>
+   799→                      ))}
+   800→                    </div>
+   801→                  </div>
+   802→
+   803→                  <div className="ls-panel rounded-2xl p-3.5">
+   804→                    <p className="ls-font mb-2 text-xs text-amber-200">AVATAR COLLECTION</p>
+   805→                    <div className="flex flex-wrap gap-2">
+   806→                      {AVATARS.map((a) => (
+   807→                        <motion.button
+   808→                          key={a}
+   809→                          whileTap={{ scale: 0.9 }}
+   810→                          onClick={() => updateProfile({ avatar: a })}
+   811→                          className="grid h-10 w-10 place-items-center rounded-full text-xl"
+   812→                          style={
+   813→                            profile.avatar === a
+   814→                              ? { background: 'rgba(246,196,83,0.22)', boxShadow: '0 0 0 2.5px #f6c453' }
+   815→                              : { background: 'rgba(255,255,255,0.06)', boxShadow: 'inset 0 0 0 1.5px rgba(255,255,255,0.2)' }
+   816→                          }
+   817→                          aria-label={`Choose avatar ${a}`}
+   818→                        >
+   819→                          {a}
+   820→                        </motion.button>
+   821→                      ))}
+   822→                    </div>
+   823→                  </div>
+   824→
+   825→                  <div className="ls-panel rounded-2xl p-3.5">
+   826→                    <p className="ls-font mb-2 text-xs text-amber-200">ACHIEVEMENTS</p>
+   827→                    <div className="space-y-2">
+   828→                      {ACHIEVEMENTS.map((a) => {
+   829→                        const val = a.progress({ wins: profile.wins, losses: profile.losses, coins: profile.coins, gems: profile.gems })
+   830→                        const done = val >= a.goal
+   831→                        return (
+   832→                          <div key={a.id} className="flex items-center gap-2.5">
+   833→                            <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl text-lg ${done ? 'bg-amber-400/20 ring-1 ring-amber-300/50' : 'bg-white/5 ring-1 ring-white/10'}`}>{a.icon}</span>
+   834→                            <div className="min-w-0 flex-1">
+   835→                              <div className="flex items-center justify-between gap-2">
+   836→                                <p className="ls-font truncate text-[11px] text-white">{a.name}</p>
+   837→                                {done && <Check size={13} className="shrink-0 text-emerald-400" />}
+   838→                              </div>
+   839→                              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-black/30">
+   840→                                <div className="h-full rounded-full" style={{ width: `${Math.min(100, (val / a.goal) * 100)}%`, background: 'linear-gradient(90deg,#34d399,#f6c453)' }} />
+   841→                              </div>
+   842→                            </div>
+   843→                            <span className="text-[8px] text-fuchsia-100/50">{Math.min(val, a.goal).toLocaleString()}/{a.goal.toLocaleString()}</span>
+   844→                          </div>
+   845→                        )
+   846→                      })}
+   847→                    </div>
+   848→                  </div>
+   849→                </div>
+   850→              )}
+   851→
+   852→              {/* ---- CHEST (daily reward) ---- */}
+   853→              {tab === 'chest' && (
+   854→                <div>
+   855→                  <motion.button
+   856→                    whileTap={{ scale: 0.97 }}
+   857→                    onClick={claimDaily}
+   858→                    disabled={!dailyClaimable}
+   859→                    className="ls-tile-gold relative flex w-full flex-col items-center gap-1.5 overflow-hidden rounded-3xl py-6"
+   860→                  >
+   861→                    <motion.span
+   862→                      animate={dailyClaimable ? { rotate: [0, -7, 7, 0], scale: [1, 1.06, 1] } : undefined}
+   863→                      transition={{ repeat: Infinity, duration: 2.2 }}
+   864→                    >
+   865→                      <Gift size={52} color="#fff3c4" fill="rgba(255,255,255,0.25)" />
+   866→                    </motion.span>
+   867→                    <span className="ls-font text-lg text-white" style={{ textShadow: '0 2px 0 rgba(150,80,0,0.7)' }}>
+   868→                      {dailyClaimable ? `DAY ${(daily?.streak ?? 0) + 1} — CLAIM` : 'CLAIMED — BACK TOMORROW'}
+   869→                    </span>
+   870→                    <span className="flex items-center gap-1 text-xs text-amber-100/85">
+   871→                      <CoinIcon size={13} />
+   872→                      {DAILY_REWARDS[daily ? Math.min(6, daily.streak) : 0].toLocaleString()} coins
+   873→                    </span>
+   874→                  </motion.button>
+   875→
+   876→                  <div className="ls-panel mt-3 rounded-2xl p-3">
+   877→                    <p className="ls-font mb-2 text-xs text-amber-200">STREAK STARS</p>
+   878→                    <div className="grid grid-cols-7 gap-1">
+   879→                      {DAILY_REWARDS.map((r, i) => {
+   880→                        const reached = (daily?.streak ?? 0) > i || (dailyClaimable && (daily?.streak ?? 0) === i)
+   881→                        return (
+   882→                          <div key={i} className="flex flex-col items-center gap-1">
+   883→                            <span
+   884→                              className={`grid h-9 w-full place-items-center rounded-lg text-[9px] ls-font ${reached ? 'text-amber-100' : 'text-fuchsia-100/40'}`}
+   885→                              style={{
+   886→                                background: reached ? 'linear-gradient(180deg,#a94b12,#7c1f6e)' : 'rgba(0,0,0,0.28)',
+   887→                                boxShadow: reached ? 'inset 0 0 0 1.5px rgba(255,224,138,0.55)' : 'inset 0 0 0 1px rgba(255,255,255,0.1)',
+   888→                              }}
+   889→                            >
+   890→                              {r >= 1000 ? `${r / 1000}k` : r}
+   891→                            </span>
+   892→                            <span className="text-[7px] uppercase text-fuchsia-100/50">D{i + 1}</span>
+   893→                          </div>
+   894→                        )
+   895→                      })}
+   896→                    </div>
+   897→                    <p className="mt-2 text-[10px] leading-relaxed text-fuchsia-100/60">Come back every day — the chest grows to 2,500 coins on day 7.</p>
+   898→                  </div>
+   899→                </div>
+   900→              )}
+   901→            </div>
+   902→          </motion.div>
+   903→        )}
+   904→      </AnimatePresence>
+   905→
+   906→      {/* ============ SHEETS (table setup / private / ranks) ============ */}
+   907→      <AnimatePresence>
+   908→        {sheet && (
+   909→          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-50">
+   910→            <div className="absolute inset-0 bg-black/55" onClick={() => setSheet(null)} />
+   911→            <motion.div
+   912→              initial={{ y: '100%' }}
+   913→              animate={{ y: 0 }}
+   914→              exit={{ y: '100%' }}
+   915→              transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+   916→              className="absolute inset-x-0 bottom-0 mx-auto w-full max-w-[430px]"
+   917→            >
+   918→              <div className="ls-sheet ls-scroll max-h-[72vh] overflow-y-auto rounded-t-3xl p-4 pb-6">
+   919→                <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/25" />
+   920→
+   921→                {/* ---- TABLE SHEET (2 / 4 player) ---- */}
+   922→                {(sheet === 'table2' || sheet === 'table4') && (
+   923→                  <div>
+   924→                    <div className="mb-3 flex items-center gap-2.5">
+   925→                      <div className="h-11 w-11">{sheet === 'table2' ? <Art2P /> : <Art4P />}</div>
+   926→                      <div>
+   927→                        <h3 className="ls-font text-lg leading-tight text-white">{sheet === 'table2' ? '2 PLAYER' : '4 PLAYER'}</h3>
+   928→                        <p className="text-[10px] text-fuchsia-100/60">
+   929→                          {sheet === 'table2' ? 'Head-to-head table · invite a friend or add a bot' : 'Quick match · seats filled with live players or bots'}
+   930→                        </p>
+   931→                      </div>
+   932→                    </div>
+   933→
+   934→                    <p className="ls-font mb-1.5 text-[10px] tracking-wide text-amber-200">GAME TYPE</p>
+   935→                    <div className="grid grid-cols-3 gap-1.5">
+   936→                      {(['classic', 'quick', 'master'] as GameMode[]).map((m) => (
+   937→                        <button
+   938→                          key={m}
+   939→                          onClick={() => setSheetMode(m)}
+   940→                          data-active={sheetMode === m}
+   941→                          className="ls-option ls-font flex flex-col items-center gap-1 rounded-xl py-2 text-[11px] text-white"
+   942→                        >
+   943→                          <ModeIllustration kind={m} size={30} />
+   944→                          {m.toUpperCase()}
+   945→                        </button>
+   946→                      ))}
+   947→                    </div>
+   948→
+   949→                    <p className="ls-font mb-1.5 mt-3 text-[10px] tracking-wide text-amber-200">ENTRY STAKE</p>
+   950→                    <div className="grid grid-cols-4 gap-1.5">
+   951→                      {[...STAKES].map((s) => {
+   952→                        const afford = profile.coins >= s
+   953→                        return (
+   954→                          <button
+   955→                            key={s}
+   956→                            onClick={() => afford && setStake(s)}
+   957→                            disabled={!afford}
+   958→                            data-active={stake === s}
+   959→                            className={`ls-option ls-font flex items-center justify-center gap-1 rounded-xl py-2 text-[11px] text-white ${!afford ? 'opacity-35' : ''}`}
+   960→                          >
+   961→                            <CoinIcon size={12} /> {s.toLocaleString()}
+   962→                          </button>
+   963→                        )
+   964→                      })}
+   965→                    </div>
+   966→
+   967→                    <div className="mt-3.5 grid grid-cols-1 gap-2">
+   968→                      <motion.button
+   969→                        whileTap={{ scale: 0.97 }}
+   970→                        onClick={playOnlineFromSheet}
+   971→                        disabled={!canPlay || busy}
+   972→                        className="ls-btn ls-btn-gold ls-font flex items-center justify-center gap-2 rounded-2xl py-3.5 text-base text-white"
+   973→                      >
+   974→                        {busy ? (
+   975→                          <span className="inline-flex items-center gap-2"><Loader2 size={17} className="animate-spin" /> FINDING TABLE...</span>
+   976→                        ) : (
+   977→                          <>
+   978→                            <Globe size={17} /> PLAY ONLINE
+   979→                          </>
+   980→                        )}
+   981→                      </motion.button>
+   982→                      <div className="grid grid-cols-3 gap-2">
+   983→                        <button
+   984→                          onClick={() => startVsComputer(sheetMode, seats, stake)}
+   985→                          className="ls-btn ls-btn-green ls-font flex items-center justify-center gap-1 rounded-xl px-1 py-2.5 text-[11px] text-white"
+   986→                        >
+   987→                          <Bot size={13} /> VS BOT
+   988→                        </button>
+   989→                        <button
+   990→                          onClick={() => startPass(sheetMode, seats, stake)}
+   991→                          className="ls-btn ls-font flex items-center justify-center gap-1 rounded-xl px-1 py-2.5 text-[11px] text-white"
+   992→                        >
+   993→                          <Users size={13} /> PASS N PLAY
+   994→                        </button>
+   995→                        <button
+   996→                          onClick={() => startLocalGame({ mode: 'classic', stake: 0, players: practicePlayers() })}
+   997→                          className="ls-btn ls-btn-ghost ls-font flex items-center justify-center gap-1 rounded-xl px-1 py-2.5 text-[11px] text-fuchsia-50"
+   998→                        >
+   999→                          <Timer size={13} /> PRACTICE
+  1000→                        </button>
+  1001→                      </div>
+  1002→                    </div>
+  1003→
+  1004→                    {!canPlay && (
+  1005→                      <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-rose-400/30 bg-rose-950/50 px-3 py-2">
+  1006→                        <span className="text-[11px] text-rose-200">Not enough coins for this stake.</span>
+  1007→                        <button onClick={refillCoins} className="ls-font ml-auto rounded-full px-3 py-1 text-[10px] text-[#4a2c00]" style={{ background: 'linear-gradient(180deg,#ffe08a,#e09b1a)' }}>
+  1008→                          GET {FREE_REFILL.toLocaleString()} FREE
+  1009→                        </button>
+  1010→                      </div>
+  1011→                    )}
+  1012→                  </div>
+  1013→                )}
+  1014→
+  1015→                {/* ---- PRIVATE TABLE SHEET ---- */}
+  1016→                {sheet === 'private' && (
+  1017→                  <div>
+  1018→                    <div className="mb-3 flex items-center gap-2.5">
+  1019→                      <div className="h-11 w-11"><ArtPrivate /></div>
+  1020→                      <div>
+  1021→                        <h3 className="ls-font text-lg leading-tight text-white">PRIVATE TABLE</h3>
+  1022→                        <p className="text-[10px] text-fuchsia-100/60">Create a room, share the code, play together</p>
+  1023→                      </div>
+  1024→                    </div>
+  1025→
+  1026→                    <p className="ls-font mb-1.5 text-[10px] tracking-wide text-amber-200">ENTRY STAKE</p>
+  1027→                    <div className="grid grid-cols-4 gap-1.5">
+  1028→                      {[...STAKES].map((s) => {
+  1029→                        const afford = profile.coins >= s
+  1030→                        return (
+  1031→                          <button
+  1032→                            key={s}
+  1033→                            onClick={() => afford && setStake(s)}
+  1034→                            disabled={!afford}
+  1035→                            data-active={stake === s}
+  1036→                            className={`ls-option ls-font flex items-center justify-center gap-1 rounded-xl py-2 text-[11px] text-white ${!afford ? 'opacity-35' : ''}`}
+  1037→                          >
+  1038→                            <CoinIcon size={12} /> {s.toLocaleString()}
+  1039→                          </button>
+  1040→                        )
+  1041→                      })}
+  1042→                    </div>
+  1043→
+  1044→                    <motion.button
+  1045→                      whileTap={{ scale: 0.97 }}
+  1046→                      onClick={() => {
+  1047→                        if (!canPlay || busy) return
+  1048→                        setBusy(true)
+  1049→                        onlineCreate({ stake, mode: 'classic', seats: 4, botFill: true })
+  1050→                        setTimeout(() => setBusy(false), 2500)
+  1051→                        setSheet(null)
+  1052→                      }}
+  1053→                      disabled={!canPlay || busy}
+  1054→                      className="ls-btn ls-btn-gold ls-font mt-3.5 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-base text-white"
+  1055→                    >
+  1056→                      {busy ? (
+  1057→                        <span className="inline-flex items-center gap-2"><Loader2 size={17} className="animate-spin" /> CREATING...</span>
+  1058→                      ) : (
+  1059→                        <>
+  1060→                          <KeyRound size={17} /> CREATE ROOM
+  1061→                        </>
+  1062→                      )}
+  1063→                    </motion.button>
+  1064→
+  1065→                    <div className="mt-3 flex items-center gap-2 border-t border-white/10 pt-3">
+  1066→                      <input
+  1067→                        value={joinCode}
+  1068→                        onChange={(e) => setJoinCode(e.target.value.toUpperCase().slice(0, 6))}
+  1069→                        placeholder="ENTER ROOM CODE"
+  1070→                        className="ls-glass-input min-w-0 flex-1 rounded-xl px-3 py-2.5 text-center text-sm font-black tracking-[0.25em] text-white placeholder:tracking-normal placeholder:text-fuchsia-100/40"
+  1071→                        aria-label="Room code"
+  1072→                      />
+  1073→                      <button
+  1074→                        onClick={() => canPlay && joinCode.length >= 3 && onlineJoin(joinCode, stake, 'classic')}
+  1075→                        disabled={!canPlay || joinCode.length < 3}
+  1076→                        className="ls-btn ls-btn-green ls-font flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm text-white disabled:opacity-40"
+  1077→                      >
+  1078→                        <Send size={13} /> JOIN
+  1079→                      </button>
+  1080→                    </div>
+  1081→
+  1082→                    {!canPlay && (
+  1083→                      <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-rose-400/30 bg-rose-950/50 px-3 py-2">
+  1084→                        <span className="text-[11px] text-rose-200">Not enough coins for this stake.</span>
+  1085→                        <button onClick={refillCoins} className="ls-font ml-auto rounded-full px-3 py-1 text-[10px] text-[#4a2c00]" style={{ background: 'linear-gradient(180deg,#ffe08a,#e09b1a)' }}>
+  1086→                          GET {FREE_REFILL.toLocaleString()} FREE
+  1087→                        </button>
+  1088→                      </div>
+  1089→                    )}
+  1090→                  </div>
+  1091→                )}
+  1092→
+  1093→                {/* ---- RANKS SHEET ---- */}
+  1094→                {sheet === 'ranks' && (
+  1095→                  <div>
+  1096→                    <div className="mb-3 flex items-center gap-2.5">
+  1097→                      <span className="grid h-11 w-11 place-items-center rounded-2xl text-amber-200" style={{ background: 'rgba(246,196,83,0.15)', boxShadow: 'inset 0 0 0 1.5px rgba(246,196,83,0.4)' }}>
+  1098→                        <Trophy size={22} />
+  1099→                      </span>
+  1100→                      <div>
+  1101→                        <h3 className="ls-font text-lg leading-tight text-white">LEADERBOARD</h3>
+  1102→                        <p className="text-[10px] text-fuchsia-100/60">Season 1 · resets every Monday</p>
+  1103→                      </div>
+  1104→                    </div>
+  1105→                    <div className="ls-panel overflow-hidden rounded-2xl">
+  1106→                      {(() => {
+  1107→                        const rows = [...LEADERBOARD_SEED, { name: profile.name, avatar: profile.avatar, wins: profile.wins, trophies: Math.floor(profile.wins / 3), isYou: true }]
+  1108→                          .sort((a, b) => b.wins - a.wins)
+  1109→                        return rows.map((r, i) => (
+  1110→                          <div key={r.name + i} className={`flex items-center gap-2.5 border-b border-white/5 px-3 py-2 last:border-0 ${'isYou' in r && r.isYou ? 'bg-amber-400/10' : ''}`}>
+  1111→                            <span
+  1112→                              className="ls-font grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs"
+  1113→                              style={{
+  1114→                                background: i === 0 ? 'linear-gradient(180deg,#ffe08a,#e09b1a)' : i === 1 ? 'linear-gradient(180deg,#e2e8f0,#94a3b8)' : i === 2 ? 'linear-gradient(180deg,#d97706,#92400e)' : 'rgba(255,255,255,0.08)',
+  1115→                                color: i < 3 ? '#3b2200' : '#f3e8ff',
+  1116→                              }}
+  1117→                            >
+  1118→                              {i + 1}
+  1119→                            </span>
+  1120→                            <AvatarRing avatar={r.avatar} size={30} />
+  1121→                            <span className={`ls-font min-w-0 flex-1 truncate text-xs ${'isYou' in r && r.isYou ? 'text-amber-200' : 'text-white'}`}>
+  1122→                              {r.name}{'isYou' in r && r.isYou ? ' (You)' : ''}
+  1123→                            </span>
+  1124→                            <span className="text-[10px] text-fuchsia-100/60">{r.trophies} 🏆</span>
+  1125→                            <span className="ls-font w-12 text-right text-[11px] text-amber-100">{r.wins} wins</span>
+  1126→                          </div>
+  1127→                        ))
+  1128→                      })()}
+  1129→                    </div>
+  1130→                    <p className="mt-2 text-[10px] text-fuchsia-100/50">Wins from every mode count toward your rank.</p>
+  1131→                  </div>
+  1132→                )}
+  1133→
+  1134→                {onlineError && (
+  1135→                  <p className="mt-2.5 rounded-lg border border-rose-400/30 bg-rose-950/50 px-3 py-1.5 text-[11px] text-rose-200">{onlineError}</p>
+  1136→                )}
+  1137→              </div>
+  1138→            </motion.div>
+  1139→          </motion.div>
+  1140→        )}
+  1141→      </AnimatePresence>
+  1142→
+  1143→      {/* copied toast */}
+  1144→      <AnimatePresence>
+  1145→        {copied && (
+  1146→          <motion.div
+  1147→            initial={{ opacity: 0, y: 12 }}
+  1148→            animate={{ opacity: 1, y: 0 }}
+  1149→            exit={{ opacity: 0, y: 12 }}
+  1150→            className="ls-sheet fixed bottom-24 left-1/2 z-[60] flex -translate-x-1/2 items-center gap-2 rounded-full px-4 py-2 text-xs text-white"
+  1151→          >
+  1152→            <Copy size={13} className="text-emerald-300" /> Copied!
+  1153→          </motion.div>
+  1154→        )}
+  1155→      </AnimatePresence>
+  1156→    </div>
+  1157→  )
+  1158→}
+  1159→
