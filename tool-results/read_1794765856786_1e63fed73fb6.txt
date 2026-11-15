@@ -1,0 +1,463 @@
+   586→                                <button
+   587→                                  onClick={playOnline}
+   588→                                  disabled={!canPlay || busy}
+   589→                                  className="ls-btn ls-btn-gold ls-font col-span-2 flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm text-white disabled:opacity-50"
+   590→                                >
+   591→                                  {busy ? (
+   592→                                    <span className="inline-flex items-center gap-2"><Loader2 size={14} className="animate-spin" /> FINDING TABLE...</span>
+   593→                                  ) : (
+   594→                                    <>
+   595→                                      <Globe size={15} /> PLAY ONLINE
+   596→                                    </>
+   597→                                  )}
+   598→                                </button>
+   599→                              )}
+   600→                              {selectedDef.id === 'private' ? (
+   601→                                <button
+   602→                                  onClick={() => selectedDef.online && onlineCreate({ stake, mode: 'classic', seats: 4, botFill: true })}
+   603→                                  disabled={!canPlay || busy}
+   604→                                  className="ls-btn ls-font col-span-2 flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm text-white disabled:opacity-50"
+   605→                                >
+   606→                                  <KeyRound size={14} /> CREATE ROOM
+   607→                                </button>
+   608→                              ) : (
+   609→                                <>
+   610→                                  {selectedDef.online && (
+   611→                                    <button
+   612→                                      onClick={() => selectedDef.online && onlineCreate({ stake, mode: dockGameMode(), seats: dockSeats(), botFill: true })}
+   613→                                      disabled={!canPlay || busy}
+   614→                                      className="ls-btn ls-font flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-xs text-white disabled:opacity-50"
+   615→                                    >
+   616→                                      <KeyRound size={13} /> CREATE ROOM
+   617→                                    </button>
+   618→                                  )}
+   619→                                  <button
+   620→                                    onClick={() => selectedDef.free
+   621→                                      ? startLocalGame({ mode: 'classic', stake: 0, players: practicePlayers() })
+   622→                                      : startVsComputer(dockGameMode(), dockSeats(), selectedDef.free ? 0 : stake)}
+   623→                                    className={`ls-btn ls-btn-green ls-font flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-xs text-white ${!selectedDef.online ? 'col-span-2' : ''}`}
+   624→                                  >
+   625→                                    <Bot size={14} /> {selectedDef.free ? 'START PRACTICE' : 'VS COMPUTER'}
+   626→                                  </button>
+   627→                                  <button
+   628→                                    onClick={() => startPass(dockGameMode(), dockSeats(), selectedDef.free ? 0 : stake)}
+   629→                                    className={`ls-btn ls-btn-ghost ls-font flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-xs text-indigo-100 ${!selectedDef.online && !selectedDef.free ? 'col-span-2' : ''}`}
+   630→                                  >
+   631→                                    <Users size={14} /> PASS N PLAY
+   632→                                  </button>
+   633→                                </>
+   634→                              )}
+   635→                            </div>
+   636→
+   637→                            {/* join code row (private room only) */}
+   638→                            {selectedDef.id === 'private' && (
+   639→                              <div className="mt-2.5 flex items-center gap-2 border-t border-white/10 pt-2.5">
+   640→                                <input
+   641→                                  value={joinCode}
+   642→                                  onChange={(e) => setJoinCode(e.target.value.toUpperCase().slice(0, 6))}
+   643→                                  placeholder="ENTER ROOM CODE"
+   644→                                  className="ls-glass-input min-w-0 flex-1 rounded-xl px-3 py-2.5 text-center text-sm font-black tracking-[0.25em] text-white placeholder:tracking-normal placeholder:text-indigo-300/40"
+   645→                                  aria-label="Room code"
+   646→                                />
+   647→                                <button
+   648→                                  onClick={() => canPlay && joinCode.length >= 3 && onlineJoin(joinCode, stake, 'classic')}
+   649→                                  disabled={!canPlay || joinCode.length < 3}
+   650→                                  className="ls-btn ls-btn-green ls-font flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm text-white disabled:opacity-40"
+   651→                                >
+   652→                                  <Send size={13} /> JOIN
+   653→                                </button>
+   654→                              </div>
+   655→                            )}
+   656→
+   657→                            {!canPlay && !selectedDef.free && (
+   658→                              <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-rose-400/30 bg-rose-950/50 px-3 py-2">
+   659→                                <span className="text-[11px] text-rose-200">Not enough coins for this stake.</span>
+   660→                                <button onClick={refillCoins} className="ls-font ml-auto rounded-full px-3 py-1 text-[10px] text-[#4a2c00]" style={{ background: 'linear-gradient(180deg,#ffe08a,#e09b1a)' }}>
+   661→                                  GET {FREE_REFILL.toLocaleString()} FREE
+   662→                                </button>
+   663→                              </div>
+   664→                            )}
+   665→                            {onlineError && (
+   666→                              <p className="mt-2 rounded-lg border border-rose-400/30 bg-rose-950/50 px-3 py-1.5 text-[11px] text-rose-200">{onlineError}</p>
+   667→                            )}
+   668→                          </div>
+   669→                        </motion.div>
+   670→                      )}
+   671→                    </AnimatePresence>
+   672→                  </section>
+   673→
+   674→                  {/* daily reward */}
+   675→                  <section>
+   676→                    <SectionTitle icon={<Gift size={13} />} title="Daily Reward" />
+   677→                    <motion.div
+   678→                      whileTap={{ scale: 0.98 }}
+   679→                      className="ls-panel ls-panel-gold relative overflow-hidden rounded-2xl p-3"
+   680→                    >
+   681→                      <motion.div
+   682→                        className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-amber-400/20 blur-2xl"
+   683→                        animate={{ scale: dailyClaimable ? [1, 1.2, 1] : 1 }}
+   684→                        transition={{ repeat: Infinity, duration: 2.4 }}
+   685→                      />
+   686→                      <div className="flex items-center gap-2.5">
+   687→                        <motion.span
+   688→                          className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-2xl"
+   689→                          style={{ background: 'linear-gradient(160deg, rgba(246,196,83,0.25), rgba(246,196,83,0.08))', boxShadow: 'inset 0 0 0 1.5px rgba(246,196,83,0.5)' }}
+   690→                          animate={dailyClaimable ? { rotate: [0, -8, 8, 0] } : undefined}
+   691→                          transition={{ repeat: Infinity, duration: 2.2 }}
+   692→                        >
+   693→                          🎁
+   694→                        </motion.span>
+   695→                        <div className="min-w-0 flex-1">
+   696→                          <p className="ls-font text-xs text-white">
+   697→                            Day {(daily?.streak ?? 0) + (dailyClaimable ? 1 : 0)} reward
+   698→                          </p>
+   699→                          <p className="text-[10px] text-indigo-200/70">
+   700→                            {dailyClaimable
+   701→                              ? `${DAILY_REWARDS[daily ? Math.min(6, daily.streak) : 0].toLocaleString()} coins waiting`
+   702→                              : 'Claimed today — come back tomorrow'}
+   703→                          </p>
+   704→                        </div>
+   705→                        <button
+   706→                          onClick={claimDaily}
+   707→                          disabled={!dailyClaimable}
+   708→                          className={`ls-font rounded-xl px-3.5 py-2 text-[11px] text-white ${dailyClaimable ? 'ls-btn ls-btn-gold' : 'ls-chip opacity-50'}`}
+   709→                        >
+   710→                          {dailyClaimable ? 'CLAIM' : 'DONE'}
+   711→                        </button>
+   712→                      </div>
+   713→                      {/* streak pips */}
+   714→                      <div className="mt-2.5 flex gap-1">
+   715→                        {DAILY_REWARDS.map((r, i) => {
+   716→                          const reached = (daily?.streak ?? 0) > i || (dailyClaimable && (daily?.streak ?? 0) === i)
+   717→                          return (
+   718→                            <div key={i} className="flex flex-1 flex-col items-center gap-0.5">
+   719→                              <span
+   720→                                className="h-1.5 w-full rounded-full"
+   721→                                style={{ background: reached ? 'linear-gradient(90deg,#f6c453,#ffe08a)' : 'rgba(148,163,255,0.15)' }}
+   722→                              />
+   723→                              <span className={`text-[8px] ${reached ? 'text-amber-200' : 'text-indigo-300/50'}`}>{r >= 1000 ? `${r / 1000}k` : r}</span>
+   724→                            </div>
+   725→                          )
+   726→                        })}
+   727→                      </div>
+   728→                    </motion.div>
+   729→                  </section>
+   730→
+   731→                  {/* friends strip */}
+   732→                  <section>
+   733→                    <SectionTitle
+   734→                      icon={<Users size={13} />}
+   735→                      title="Friends Online"
+   736→                      action={
+   737→                        <button onClick={() => setTab('friends')} className="inline-flex items-center text-[10px] text-violet-300 transition hover:text-violet-200">
+   738→                          View all <ChevronRight size={11} />
+   739→                        </button>
+   740→                      }
+   741→                    />
+   742→                    <div className="ls-scroll -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+   743→                      {BOT_FRIENDS.filter((f) => f.status !== 'offline').slice(0, 6).map((f) => (
+   744→                        <FriendTile key={f.name} f={f} onPlay={() => startVsComputer('classic', 4, 0)} />
+   745→                      ))}
+   746→                    </div>
+   747→                  </section>
+   748→
+   749→                  {/* events ticker */}
+   750→                  <section>
+   751→                    <SectionTitle icon={<Bell size={13} />} title="Events" />
+   752→                    <div className="ls-scroll -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+   753→                      {EVENTS.map((e) => (
+   754→                        <div key={e.title} className="ls-chip flex w-[190px] shrink-0 items-center gap-2 rounded-2xl px-2.5 py-2">
+   755→                          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-violet-500/15 text-base ring-1 ring-violet-400/30">{e.icon}</span>
+   756→                          <div className="min-w-0">
+   757→                            <p className="ls-font truncate text-[11px] text-white">{e.title}</p>
+   758→                            <p className="truncate text-[9px] text-indigo-200/60">{e.text}</p>
+   759→                          </div>
+   760→                        </div>
+   761→                      ))}
+   762→                    </div>
+   763→                  </section>
+   764→                </div>
+   765→              )}
+   766→
+   767→              {/* ---------------- FRIENDS ---------------- */}
+   768→              {tab === 'friends' && (
+   769→                <div>
+   770→                  <SectionTitle icon={<Users size={13} />} title="Friends" action={<span className="text-[10px] text-indigo-300/60">{BOT_FRIENDS.filter((f) => f.status !== 'offline').length} online now</span>} />
+   771→                  <div className="grid grid-cols-1 gap-2">
+   772→                    {BOT_FRIENDS.map((f) => (
+   773→                      <FriendRow key={f.name} f={f} onPlay={() => startVsComputer('classic', 4, 0)} />
+   774→                    ))}
+   775→                  </div>
+   776→                  <p className="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-[11px] leading-relaxed text-indigo-200/60">
+   777→                    Challenge a friend to a rematch on the spot, or open a Private Room from the Home tab and share the code with anyone.
+   778→                  </p>
+   779→                </div>
+   780→              )}
+   781→
+   782→              {/* ---------------- LEADERBOARD ---------------- */}
+   783→              {tab === 'leaderboard' && (
+   784→                <div>
+   785→                  <SectionTitle icon={<Trophy size={13} />} title="Weekly Leaderboard" action={<Tag tone="gold"><Crown size={10} /> Season 1</Tag>} />
+   786→                  <div className="ls-panel overflow-hidden rounded-2xl">
+   787→                    {(() => {
+   788→                      const rows = [...LEADERBOARD_SEED, { name: profile.name, avatar: profile.avatar, wins: profile.wins, trophies: Math.floor(profile.wins / 3), isYou: true }]
+   789→                        .sort((a, b) => b.wins - a.wins)
+   790→                      return rows.map((r, i) => (
+   791→                        <motion.div
+   792→                          key={r.name + i}
+   793→                          initial={{ opacity: 0, x: -12 }}
+   794→                          animate={{ opacity: 1, x: 0 }}
+   795→                          transition={{ delay: i * 0.04 }}
+   796→                          className={`flex items-center gap-2.5 border-b border-white/5 px-3 py-2.5 last:border-0 ${r.isYou ? 'bg-violet-500/10' : ''}`}
+   797→                        >
+   798→                          <span
+   799→                            className="ls-font grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm"
+   800→                            style={{
+   801→                              background: i === 0 ? 'linear-gradient(180deg,#ffe08a,#e09b1a)' : i === 1 ? 'linear-gradient(180deg,#e2e8f0,#94a3b8)' : i === 2 ? 'linear-gradient(180deg,#d97706,#92400e)' : 'rgba(148,163,255,0.1)',
+   802→                              color: i < 3 ? '#3b2200' : '#c7d2fe',
+   803→                            }}
+   804→                          >
+   805→                            {i + 1}
+   806→                          </span>
+   807→                          <AvatarRing avatar={r.avatar} size={32} color={r.isYou ? 'red' : undefined} />
+   808→                          <span className={`ls-font min-w-0 flex-1 truncate text-sm ${r.isYou ? 'text-amber-200' : 'text-white'}`}>
+   809→                            {r.name}{r.isYou ? ' (You)' : ''}
+   810→                          </span>
+   811→                          <span className="text-[11px] text-indigo-300/70">{r.trophies} 🏆</span>
+   812→                          <span className="ls-font w-14 text-right text-xs text-amber-100">{r.wins} wins</span>
+   813→                        </motion.div>
+   814→                      ))
+   815→                    })()}
+   816→                  </div>
+   817→                  <p className="mt-3 text-[11px] text-indigo-200/50">Season resets every Monday. Wins from every mode count toward your rank.</p>
+   818→                </div>
+   819→              )}
+   820→
+   821→              {/* ---------------- REWARDS ---------------- */}
+   822→              {tab === 'rewards' && (
+   823→                <div className="space-y-4">
+   824→                  <div>
+   825→                    <SectionTitle icon={<Gift size={13} />} title="Daily Login Streak" />
+   826→                    <div className="ls-panel rounded-2xl p-3">
+   827→                      <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-7">
+   828→                        {DAILY_REWARDS.map((r, i) => {
+   829→                          const claimedToday = i < (daily?.streak ?? 0)
+   830→                          const isNext = dailyClaimable && i === (daily?.streak ?? 0)
+   831→                          return (
+   832→                            <div
+   833→                              key={i}
+   834→                              className={`relative flex flex-col items-center gap-1 rounded-xl px-1 py-2.5 ${isNext ? 'ls-panel-gold ls-panel' : 'ls-chip'}`}
+   835→                            >
+   836→                              {isNext && (
+   837→                                <motion.span
+   838→                                  className="absolute -top-2 h-2 w-2 rounded-full bg-amber-300"
+   839→                                  animate={{ scale: [1, 1.6, 1] }}
+   840→                                  transition={{ repeat: Infinity, duration: 1.2 }}
+   841→                                  style={{ boxShadow: '0 0 8px #f6c453' }}
+   842→                                />
+   843→                              )}
+   844→                              <span className="text-lg">{claimedToday ? '✅' : isNext ? '🎁' : '🔒'}</span>
+   845→                              <span className="flex items-center gap-0.5 text-[9px] text-indigo-200/80">
+   846→                                <CoinIcon size={10} /> {r >= 1000 ? `${r / 1000}k` : r}
+   847→                              </span>
+   848→                              <span className="text-[8px] uppercase text-indigo-300/50">Day {i + 1}</span>
+   849→                            </div>
+   850→                          )
+   851→                        })}
+   852→                      </div>
+   853→                      <button
+   854→                        onClick={claimDaily}
+   855→                        disabled={!dailyClaimable}
+   856→                        className={`ls-font mt-3 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm text-white ${dailyClaimable ? 'ls-btn ls-btn-gold' : 'ls-chip opacity-50'}`}
+   857→                      >
+   858→                        <Gift size={15} /> {dailyClaimable ? `CLAIM ${DAILY_REWARDS[daily ? Math.min(6, daily.streak) : 0].toLocaleString()} COINS` : 'CLAIMED — BACK TOMORROW'}
+   859→                      </button>
+   860→                    </div>
+   861→                  </div>
+   862→
+   863→                  <div>
+   864→                    <SectionTitle icon={<Medal size={13} />} title="Achievements" />
+   865→                    <div className="grid grid-cols-1 gap-2">
+   866→                      {ACHIEVEMENTS.map((a) => {
+   867→                        const val = a.progress({ wins: profile.wins, losses: profile.losses, coins: profile.coins, gems: profile.gems })
+   868→                        const done = val >= a.goal
+   869→                        return (
+   870→                          <div key={a.id} className={`ls-panel rounded-2xl p-3 ${done ? 'ls-panel-gold' : ''}`}>
+   871→                            <div className="flex items-center gap-2.5">
+   872→                              <span className={`grid h-10 w-10 place-items-center rounded-xl text-xl ${done ? 'bg-amber-400/20 ring-1 ring-amber-300/50' : 'bg-white/5 ring-1 ring-white/10'}`}>
+   873→                                {a.icon}
+   874→                              </span>
+   875→                              <div className="min-w-0 flex-1">
+   876→                                <p className="ls-font text-sm text-white">{a.name}</p>
+   877→                                <p className="truncate text-[10px] text-indigo-200/65">{a.desc}</p>
+   878→                              </div>
+   879→                              {done && <Check size={16} className="text-emerald-400" />}
+   880→                            </div>
+   881→                            <div className="mt-2 flex items-center gap-2">
+   882→                              <XPBar pct={(val / a.goal) * 100} className="flex-1" />
+   883→                              <span className="text-[9px] text-indigo-300/70">{Math.min(val, a.goal).toLocaleString()}/{a.goal.toLocaleString()}</span>
+   884→                            </div>
+   885→                          </div>
+   886→                        )
+   887→                      })}
+   888→                    </div>
+   889→                  </div>
+   890→                </div>
+   891→              )}
+   892→
+   893→              {/* ---------------- PROFILE ---------------- */}
+   894→              {tab === 'profile' && (
+   895→                <div className="grid grid-cols-1 gap-3">
+   896→                  <div className="ls-panel rounded-2xl p-4">
+   897→                    <SectionTitle icon={<UserIcon size={13} />} title="Player Card" />
+   898→                    <div className="flex items-center gap-4">
+   899→                      <div className="relative">
+   900→                        <AvatarRing avatar={profile.avatar} size={64} />
+   901→                        <LevelBadge level={lvl.level} size={28} />
+   902→                      </div>
+   903→                      <div className="min-w-0 flex-1">
+   904→                        <input
+   905→                          value={profile.name}
+   906→                          onChange={(e) => updateProfile({ name: e.target.value.slice(0, 14) })}
+   907→                          className="ls-glass-input ls-font w-full rounded-xl px-3 py-2 text-sm font-bold text-white"
+   908→                          aria-label="Your name"
+   909→                          maxLength={14}
+   910→                          placeholder="Your name"
+   911→                        />
+   912→                        <div className="mt-2 flex items-center gap-2">
+   913→                          <span className="ls-font rounded-full bg-violet-500/15 px-2.5 py-1 text-[10px] text-violet-200 ring-1 ring-violet-400/40">
+   914→                            LV {lvl.level} · {rankTitle(lvl.level)}
+   915→                          </span>
+   916→                        </div>
+   917→                        <div className="mt-2">
+   918→                          <XPBar pct={lvl.pct} />
+   919→                          <p className="mt-1 text-[10px] text-indigo-300/70">{lvl.xpNow}/{lvl.xpNeed} wins to level {lvl.level + 1}</p>
+   920→                        </div>
+   921→                      </div>
+   922→                    </div>
+   923→
+   924→                    <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+   925→                      {[
+   926→                        { label: 'Wins', value: profile.wins, tone: 'text-emerald-300' },
+   927→                        { label: 'Losses', value: profile.losses, tone: 'text-rose-300' },
+   928→                        { label: 'Win rate', value: `${winRate}%`, tone: 'text-amber-200' },
+   929→                      ].map((s) => (
+   930→                        <div key={s.label} className="ls-chip rounded-xl py-2.5">
+   931→                          <p className={`ls-font text-lg ${s.tone}`}>{s.value}</p>
+   932→                          <p className="text-[9px] uppercase tracking-wide text-indigo-300/60">{s.label}</p>
+   933→                        </div>
+   934→                      ))}
+   935→                    </div>
+   936→
+   937→                    <div className="mt-3 grid grid-cols-2 gap-2">
+   938→                      <div className="ls-chip flex items-center justify-center gap-2 rounded-xl py-2.5">
+   939→                        <CoinIcon size={16} />
+   940→                        <span className="ls-font text-sm text-amber-100">{profile.coins.toLocaleString()}</span>
+   941→                      </div>
+   942→                      <div className="ls-chip flex items-center justify-center gap-2 rounded-xl py-2.5">
+   943→                        <GemIcon size={16} />
+   944→                        <span className="ls-font text-sm text-teal-100">{profile.gems.toLocaleString()}</span>
+   945→                      </div>
+   946→                    </div>
+   947→                  </div>
+   948→
+   949→                  <div className="ls-panel rounded-2xl p-4">
+   950→                    <SectionTitle icon={<Sparkles size={13} />} title="Avatar" />
+   951→                    <div className="flex flex-wrap gap-2">
+   952→                      {AVATARS.map((a) => (
+   953→                        <motion.button
+   954→                          key={a}
+   955→                          whileTap={{ scale: 0.92 }}
+   956→                          onClick={() => updateProfile({ avatar: a })}
+   957→                          className="grid h-11 w-11 place-items-center rounded-full text-xl"
+   958→                          style={
+   959→                            profile.avatar === a
+   960→                              ? { background: 'rgba(246,196,83,0.22)', boxShadow: '0 0 0 2.5px #f6c453' }
+   961→                              : { background: 'rgba(148,163,255,0.08)', boxShadow: 'inset 0 0 0 1.5px rgba(148,163,255,0.25)' }
+   962→                          }
+   963→                          aria-label={`Choose avatar ${a}`}
+   964→                        >
+   965→                          {a}
+   966→                        </motion.button>
+   967→                      ))}
+   968→                    </div>
+   969→
+   970→                    <div className="mt-4 space-y-2">
+   971→                      <button
+   972→                        onClick={toggleSound}
+   973→                        className="ls-chip flex w-full items-center justify-between rounded-xl px-3 py-3 text-sm text-indigo-100 transition hover:brightness-125"
+   974→                      >
+   975→                        <span className="flex items-center gap-2">
+   976→                          {soundOn ? <Volume2 size={16} className="text-emerald-300" /> : <VolumeX size={16} className="text-slate-400" />}
+   977→                          Sound effects
+   978→                        </span>
+   979→                        <span className={`ls-font rounded-full px-2 py-0.5 text-[10px] ${soundOn ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-500/20 text-slate-400'}`}>
+   980→                          {soundOn ? 'ON' : 'OFF'}
+   981→                        </span>
+   982→                      </button>
+   983→                      <button
+   984→                        onClick={refillCoins}
+   985→                        className="ls-chip flex w-full items-center justify-between rounded-xl px-3 py-3 text-sm text-indigo-100 transition hover:brightness-125"
+   986→                      >
+   987→                        <span className="flex items-center gap-2"><CoinIcon size={16} /> Free coin refill</span>
+   988→                        <span className="ls-font rounded-full bg-amber-400/15 px-2 py-0.5 text-[10px] text-amber-200">+{FREE_REFILL.toLocaleString()}</span>
+   989→                      </button>
+   990→                    </div>
+   991→                  </div>
+   992→                </div>
+   993→              )}
+   994→            </motion.div>
+   995→          </AnimatePresence>
+   996→        </main>
+   997→
+   998→        {/* ============ BOTTOM NAV (always — phone layout everywhere) ============ */}
+   999→        <nav className="ls-safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#0b0f26]/92 backdrop-blur-md">
+  1000→          <div className="mx-auto grid w-full max-w-[430px] grid-cols-5 px-2 pb-1.5 pt-1.5">
+  1001→            {([
+  1002→              { id: 'home', icon: <HomeIcon size={20} />, label: 'Home' },
+  1003→              { id: 'friends', icon: <Users size={20} />, label: 'Friends' },
+  1004→              { id: 'leaderboard', icon: <Trophy size={20} />, label: 'Ranks' },
+  1005→              { id: 'rewards', icon: <Gift size={20} />, label: 'Rewards', badge: dailyClaimable },
+  1006→              { id: 'profile', icon: <UserIcon size={20} />, label: 'Profile' },
+  1007→            ] as Array<{ id: LobbyTab; icon: React.ReactNode; label: string; badge?: boolean }>).map((item) => {
+  1008→              const active = tab === item.id
+  1009→              return (
+  1010→                <button
+  1011→                  key={item.id}
+  1012→                  onClick={() => setTab(item.id)}
+  1013→                  className="relative flex flex-col items-center gap-0.5 py-1"
+  1014→                  aria-current={active ? 'page' : undefined}
+  1015→                >
+  1016→                  <motion.span
+  1017→                    whileTap={{ scale: 0.85 }}
+  1018→                    className={`relative grid h-9 w-9 place-items-center rounded-xl transition ${active ? 'text-white' : 'text-indigo-300/60'}`}
+  1019→                    style={active ? { background: 'linear-gradient(160deg,#8b5cf6,#5b21b6)', boxShadow: '0 4px 12px rgba(109,40,217,0.45)' } : undefined}
+  1020→                  >
+  1021→                    {item.icon}
+  1022→                    {item.badge && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-[#0b0f26]" />}
+  1023→                  </motion.span>
+  1024→                  <span className={`ls-font text-[9px] uppercase tracking-wide ${active ? 'text-white' : 'text-indigo-300/50'}`}>{item.label}</span>
+  1025→                </button>
+  1026→              )
+  1027→            })}
+  1028→          </div>
+  1029→        </nav>
+  1030→      </div>
+  1031→
+  1032→      {/* copied toast */}
+  1033→      <AnimatePresence>
+  1034→        {copied && (
+  1035→          <motion.div
+  1036→            initial={{ opacity: 0, y: 12 }}
+  1037→            animate={{ opacity: 1, y: 0 }}
+  1038→            exit={{ opacity: 0, y: 12 }}
+  1039→            className="ls-panel fixed bottom-24 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full px-4 py-2 text-xs text-white"
+  1040→          >
+  1041→            <Copy size={13} className="text-emerald-300" /> Copied!
+  1042→          </motion.div>
+  1043→        )}
+  1044→      </AnimatePresence>
+  1045→    </div>
+  1046→  )
+  1047→}
+  1048→
