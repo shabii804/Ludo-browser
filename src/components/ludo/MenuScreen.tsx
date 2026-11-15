@@ -14,10 +14,16 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  Bot, Check, ChevronRight, Copy, Crown, Film, Flag, Gift, Globe, Home as HomeIcon,
-  KeyRound, LayoutGrid, Loader2, Lock, Send, ShoppingCart, Star, Timer, Trophy,
+  Bot, Check, ChevronRight, Copy, Flag, Gift, Globe,
+  KeyRound, Loader2, Send, Timer, Trophy,
   Users, Volume2, VolumeX, Zap,
 } from 'lucide-react'
+import {
+  NavShop, NavFriends, NavHome, NavCollections, NavChest,
+  RailEvents, RailTrophy, RailClubs,
+  IconGear, IconLockGold, IconStarGold, HomeGlyph,
+  CrownArt, DecoDie, DecoToken, ChestArt,
+} from '@/components/ludo/icons'
 import { useLudo } from '@/stores/ludoStore'
 import { AVATARS, FREE_REFILL, STAKES } from '@/lib/ludo/constants'
 import { ACHIEVEMENTS, BOT_FRIENDS, LEADERBOARD_SEED, levelFromWins, rankTitle } from '@/lib/ludo/social'
@@ -348,7 +354,7 @@ export default function MenuScreen() {
         <div className="flex items-center gap-1.5 px-2.5 pt-2.5">
           <CurrencyChip
             value={`${Math.min(profile.wins, 50)}/50`}
-            icon={<Star size={14} fill="#ffd75e" color="#e09b1a" />}
+            icon={<IconStarGold size={16} />}
             onClick={() => setSheet('ranks')}
             label={`Win stars ${profile.wins}/50 — tap for leaderboard`}
           />
@@ -377,13 +383,10 @@ export default function MenuScreen() {
               <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={() => { setSettingsOpen((o) => !o); setEventsOpen(false) }}
-                className="ls-lobby-chip grid h-8 w-8 place-items-center rounded-full text-fuchsia-100"
+                className="ls-lobby-chip grid h-9 w-9 place-items-center rounded-full text-fuchsia-100"
                 aria-label="Settings"
               >
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="3" />
-                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                </svg>
+                <IconGear size={22} />
               </motion.button>
               <AnimatePresence>
                 {settingsOpen && (
@@ -455,7 +458,7 @@ export default function MenuScreen() {
                   </div>
                   <RibbonLabel>
                     {t.caption === 'BIG WIN' ? <><Zap size={8} /> BIG WIN</> : <><CoinIcon size={9} /> {t.caption}</>}
-                    {!afford && <Lock size={8} />}
+                    {!afford && <IconLockGold size={10} />}
                   </RibbonLabel>
                 </motion.button>
               )
@@ -464,16 +467,16 @@ export default function MenuScreen() {
         </div>
 
         {/* ============ LEFT RAIL (events / ranks / clubs) ============ */}
-        <div className="absolute left-1.5 top-[104px] z-30 flex flex-col items-center gap-2">
+        <div className="absolute left-1.5 top-[132px] z-30 flex flex-col items-center gap-2.5">
           <div className="relative">
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => { setEventsOpen((o) => !o); setSettingsOpen(false) }}
-              className="ls-rail-btn grid h-10 w-10 place-items-center rounded-full text-amber-200"
+              className="grid h-11 w-11 place-items-center rounded-full"
               aria-label="Events"
             >
-              <Film size={18} />
-              <span className="ls-font absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-rose-500 px-1 text-[8px] text-white ring-2 ring-[#7c1f6e]">3</span>
+              <RailEvents size={34} />
+              <span className="ls-font absolute -right-0.5 -top-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-rose-500 px-1 text-[9px] text-white ring-2 ring-[#7c1f6e] shadow-lg">6</span>
             </motion.button>
             <AnimatePresence>
               {eventsOpen && (
@@ -501,10 +504,10 @@ export default function MenuScreen() {
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => setSheet('ranks')}
-            className="ls-rail-btn grid h-10 w-10 place-items-center rounded-full text-amber-200"
+            className="grid h-11 w-11 place-items-center rounded-full"
             aria-label="Leaderboard"
           >
-            <Trophy size={18} />
+            <RailTrophy size={34} />
           </motion.button>
 
           <motion.button
@@ -513,10 +516,10 @@ export default function MenuScreen() {
             className="flex flex-col items-center gap-0.5"
             aria-label="Clubs and friends"
           >
-            <span className="ls-rail-btn relative grid h-11 w-11 place-items-center rounded-2xl text-fuchsia-100">
-              <Users size={19} />
+            <span className="relative grid h-12 w-12 place-items-center rounded-full">
+              <RailClubs size={38} />
               {onlineFriends > 0 && (
-                <span className="ls-font absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-rose-500 px-1 text-[8px] text-white ring-2 ring-[#7c1f6e]">{onlineFriends}</span>
+                <span className="ls-font absolute -right-0.5 -top-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-rose-500 px-1 text-[9px] text-white ring-2 ring-[#7c1f6e] shadow-lg">{onlineFriends}</span>
               )}
             </span>
             <span className="ls-font text-[8px] tracking-widest text-fuchsia-100/80">CLUBS</span>
@@ -527,12 +530,54 @@ export default function MenuScreen() {
         <main className="relative flex min-h-0 flex-1 flex-col px-3">
           {/* watermark */}
           <div className="pointer-events-none absolute inset-0 grid place-items-center" aria-hidden>
-            <div className="flex select-none flex-col items-center" style={{ opacity: 0.15 }}>
-              <Crown size={26} color="#ffffff" fill="#ffffff" />
-              <span className="ls-font text-[58px] leading-[0.95] text-white">LUDO</span>
-              <span className="ls-font text-lg leading-none tracking-[0.42em] text-white" style={{ marginRight: '-0.42em' }}>STAR</span>
+            <div className="flex -translate-y-9 select-none flex-col items-center" style={{ opacity: 0.17 }}>
+              <CrownArt size={34} />
+              <span className="ls-font text-[62px] leading-[0.92] text-white" style={{ textShadow: '0 4px 0 rgba(80,15,75,0.45)' }}>LUDO</span>
+              <span className="ls-font text-lg leading-none tracking-[0.46em] text-white" style={{ marginRight: '-0.46em', textShadow: '0 2px 0 rgba(80,15,75,0.45)' }}>STAR</span>
             </div>
           </div>
+
+          {/* floating deco (dice + pawns) */}
+          <motion.div
+            className="pointer-events-none absolute left-6 top-[38%] z-0"
+            animate={{ y: [0, -9, 0], rotate: [0, 5, 0] }}
+            transition={{ repeat: Infinity, duration: 5.2, ease: 'easeInOut' }}
+            aria-hidden
+          >
+            <DecoDie value={5} size={40} tilt={-14} />
+          </motion.div>
+          <motion.div
+            className="pointer-events-none absolute right-8 top-[30%] z-0"
+            animate={{ y: [0, -11, 0], rotate: [0, -6, 0] }}
+            transition={{ repeat: Infinity, duration: 6, ease: 'easeInOut', delay: 0.7 }}
+            aria-hidden
+          >
+            <DecoDie value={3} size={32} tilt={18} />
+          </motion.div>
+          <motion.div
+            className="pointer-events-none absolute right-[34%] top-[20%] z-0"
+            animate={{ y: [0, -7, 0] }}
+            transition={{ repeat: Infinity, duration: 4.6, ease: 'easeInOut', delay: 0.3 }}
+            aria-hidden
+          >
+            <DecoToken color="yellow" size={22} />
+          </motion.div>
+          <motion.div
+            className="pointer-events-none absolute left-[30%] top-[52%] z-0"
+            animate={{ y: [0, -6, 0] }}
+            transition={{ repeat: Infinity, duration: 4.2, ease: 'easeInOut', delay: 1 }}
+            aria-hidden
+          >
+            <DecoToken color="green" size={19} />
+          </motion.div>
+          <motion.div
+            className="pointer-events-none absolute right-[16%] top-[58%] z-0"
+            animate={{ y: [0, -8, 0] }}
+            transition={{ repeat: Infinity, duration: 5, ease: 'easeInOut', delay: 0.4 }}
+            aria-hidden
+          >
+            <DecoToken color="blue" size={17} />
+          </motion.div>
 
           <div className="flex-1" />
 
@@ -541,7 +586,7 @@ export default function MenuScreen() {
             <motion.button
               whileTap={{ scale: 0.96 }}
               onClick={() => { setSheet('table2'); setSheetMode('classic') }}
-              className="ls-tile-gold relative flex h-[min(36vw,20vh,148px)] flex-col overflow-hidden rounded-2xl p-1.5"
+              className="ls-tile-gold ls-shine relative flex h-[min(36vw,20vh,148px)] flex-col overflow-hidden rounded-2xl p-1.5"
               aria-label="Play 2 player"
             >
               <motion.span
@@ -556,7 +601,7 @@ export default function MenuScreen() {
             <motion.button
               whileTap={{ scale: 0.96 }}
               onClick={() => setSheet('private')}
-              className="ls-tile-purple relative flex h-[min(36vw,20vh,148px)] flex-col overflow-hidden rounded-2xl p-1.5"
+              className="ls-tile-purple ls-shine relative flex h-[min(36vw,20vh,148px)] flex-col overflow-hidden rounded-2xl p-1.5"
               aria-label="Open private table"
             >
               <span className="absolute right-1.5 top-1.5 grid h-5 w-5 place-items-center rounded-full bg-black/35 text-amber-200" title="Invite with a code">
@@ -575,7 +620,7 @@ export default function MenuScreen() {
               className="ls-tile-purple relative flex h-[min(19vw,12vh,84px)] flex-col items-center justify-center overflow-hidden rounded-xl p-1 opacity-95"
               aria-label="VIP — coming soon"
             >
-              <Lock size={11} className="absolute right-1.5 top-1.5 text-amber-200/90" />
+              <IconLockGold size={13} className="absolute right-1 top-1.5" />
               <div className="min-h-0 w-full flex-1"><ArtVip /></div>
             </motion.button>
 
@@ -595,7 +640,7 @@ export default function MenuScreen() {
               className="ls-tile-purple relative flex h-[min(19vw,12vh,84px)] flex-col items-center justify-center overflow-hidden rounded-xl p-1 opacity-95"
               aria-label="Team up — coming soon"
             >
-              <Lock size={11} className="absolute right-1.5 top-1.5 text-amber-200/90" />
+              <IconLockGold size={13} className="absolute right-1 top-1.5" />
               <div className="min-h-0 w-full flex-1"><ArtTeam /></div>
             </motion.button>
 
@@ -625,11 +670,11 @@ export default function MenuScreen() {
         <nav className="ls-nav-bar relative z-40 border-t border-white/10">
           <div className="mx-auto grid w-full max-w-[430px] grid-cols-5 px-1.5">
             {([
-              { id: 'shop', icon: <ShoppingCart size={20} />, label: 'Shop' },
-              { id: 'friends', icon: <Users size={20} />, label: 'Friends' },
-              { id: 'home', icon: <HomeIcon size={24} />, label: 'Home', raised: true },
-              { id: 'collections', icon: <LayoutGrid size={20} />, label: 'Collections', badge: unlockedAchievements },
-              { id: 'chest', icon: <Gift size={20} />, label: 'Chest', badge: dailyClaimable ? 1 : undefined },
+              { id: 'shop', icon: <NavShop size={30} />, label: 'Shop' },
+              { id: 'friends', icon: <NavFriends size={30} />, label: 'Friends' },
+              { id: 'home', icon: <HomeGlyph size={26} />, label: 'Home', raised: true },
+              { id: 'collections', icon: <NavCollections size={30} />, label: 'Collections', badge: unlockedAchievements },
+              { id: 'chest', icon: <NavChest size={30} />, label: 'Chest', badge: dailyClaimable ? 1 : undefined },
             ] as Array<{ id: LobbyTab; icon: React.ReactNode; label: string; raised?: boolean; badge?: number }>).map((item) => {
               const active = tab === item.id
               if (item.raised) {
@@ -716,7 +761,7 @@ export default function MenuScreen() {
                     <ul className="mt-1.5 space-y-1 text-[11px] leading-relaxed text-fuchsia-50/80">
                       <li className="flex items-center gap-2"><Gift size={12} className="text-amber-200" /> Daily chest — open the Chest tab every day</li>
                       <li className="flex items-center gap-2"><Trophy size={12} className="text-amber-200" /> Win online tables — pot goes to the champion</li>
-                      <li className="flex items-center gap-2"><Star size={12} className="text-amber-200" /> Streak Stars — bigger rewards every day in a row</li>
+                      <li className="flex items-center gap-2"><IconStarGold size={13} /> Streak Stars — bigger rewards every day in a row</li>
                     </ul>
                   </div>
                 </div>
@@ -862,7 +907,7 @@ export default function MenuScreen() {
                       animate={dailyClaimable ? { rotate: [0, -7, 7, 0], scale: [1, 1.06, 1] } : undefined}
                       transition={{ repeat: Infinity, duration: 2.2 }}
                     >
-                      <Gift size={52} color="#fff3c4" fill="rgba(255,255,255,0.25)" />
+                      <ChestArt size={92} />
                     </motion.span>
                     <span className="ls-font text-lg text-white" style={{ textShadow: '0 2px 0 rgba(150,80,0,0.7)' }}>
                       {dailyClaimable ? `DAY ${(daily?.streak ?? 0) + 1} — CLAIM` : 'CLAIMED — BACK TOMORROW'}
