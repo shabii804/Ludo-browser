@@ -1,7 +1,9 @@
 'use client'
 
 // Game screen: premium navy table — glass top bar, board with
-// center dice, player cards around, emotes, chat, timer.
+// center dice, player cards above, emotes, chat, timer.
+// PHONE-FORMAT column (max-w-[430px]) identical on desktop &
+// mobile — fixed viewport, no page scroll.
 // All game logic & handlers preserved.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -103,11 +105,7 @@ export default function GameScreen() {
     }
   }
 
-  // split players: left column gets first ceil half, right column the rest
-  const nPlayers = game.players.length
-  const leftCount = Math.ceil(nPlayers / 2)
-  const leftIdx = Array.from({ length: leftCount }, (_, i) => i)
-  const rightIdx = Array.from({ length: nPlayers - leftCount }, (_, i) => leftCount + i)
+  // all seats — 2-column grid above the board (phone-format, every screen size)
 
   const emoteFor = (color: string) => {
     const latest = [...visibleEmotes].reverse().find((e) => e.color === color)
@@ -121,7 +119,7 @@ export default function GameScreen() {
   return (
     <div className="ls-felt relative h-full">
       <div className="ls-vignette" />
-      <div className="relative z-10 mx-auto flex h-full w-full max-w-5xl flex-col px-2 pb-3 pt-2 sm:px-4">
+      <div className="relative z-10 mx-auto flex h-full w-full max-w-[430px] flex-col px-2.5 pb-3 pt-2">
         {/* top bar */}
         <div className="mb-1.5 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -184,46 +182,17 @@ export default function GameScreen() {
           </AnimatePresence>
         </div>
 
-        {/* main layout: players around board */}
+        {/* main layout: phone-format column — player grid above board */}
         <div className="flex flex-1 flex-col items-center justify-center gap-2">
-          {/* player strip (mobile) */}
-          <div className="grid w-full max-w-2xl grid-cols-2 gap-1.5 sm:gap-2 md:hidden">
+          {/* player cards — every seat, 2-column grid */}
+          <div className="grid w-full grid-cols-2 gap-1.5">
             {game.players.map((p, i) => (
               <PlayerCard key={p.color} player={cardData(i)!} compact remainingSec={game.turn === i ? remainingSec : null} emote={emoteFor(p.color)} />
             ))}
           </div>
 
-          <div className="hidden w-full items-start justify-center gap-3 md:flex">
-            <div className="flex flex-col gap-2">
-              {leftIdx.map((i) => (
-                <PlayerCard key={game.players[i].color} player={cardData(i)!} remainingSec={game.turn === i ? remainingSec : null} emote={emoteFor(game.players[i].color)} />
-              ))}
-            </div>
-
-            <Board
-              game={game}
-              movableTokenIds={movableTokenIds}
-              onTokenClick={(id) => void clickToken(id)}
-              youColor={session.youColor}
-              animating={animating}
-              emotes={[]}
-              diceValues={displayDice}
-              diceRolling={diceRolling}
-              canRoll={canRoll}
-              onRoll={() => void roll()}
-              selectedDie={selectedDie}
-              onSelectDie={selectDie}
-            />
-
-            <div className="flex flex-col gap-2">
-              {rightIdx.map((i) => (
-                <PlayerCard key={game.players[i].color} player={cardData(i)!} remainingSec={game.turn === i ? remainingSec : null} emote={emoteFor(game.players[i].color)} />
-              ))}
-            </div>
-          </div>
-
-          {/* board on mobile */}
-          <div className="w-full md:hidden">
+          {/* board — self-capped by vh, always fits the column */}
+          <div className="w-full">
             <Board
               game={game}
               movableTokenIds={movableTokenIds}

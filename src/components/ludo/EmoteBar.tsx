@@ -115,7 +115,7 @@ export function ChatPanel({
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 30 }}
-          className="ls-panel fixed bottom-4 left-4 z-50 w-72 rounded-2xl"
+          className="ls-panel fixed bottom-4 left-1/2 z-50 w-72 -translate-x-1/2 max-w-[calc(100vw-2rem)] rounded-2xl"
           style={{ backdropFilter: 'blur(8px)' }}
         >
           <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">

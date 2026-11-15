@@ -71,7 +71,7 @@ export default function WaitingRoom() {
         initial={{ opacity: 0, scale: 0.94, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 210, damping: 20 }}
-        className="ls-panel relative z-10 w-full max-w-lg rounded-3xl p-5 sm:p-6"
+        className="ls-panel relative z-10 w-full max-w-[430px] rounded-3xl p-5"
       >
         {/* header */}
         <div className="flex items-center justify-between">
