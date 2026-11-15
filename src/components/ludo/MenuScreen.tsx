@@ -3,10 +3,11 @@
 // ============================================================
 // HOME LOBBY — Ludo STAR style
 // Fixed-size (fills viewport, NO page scroll), phone-format
-// column identical on desktop. Magenta/purple play-first theme:
-// top currency bar, player row + 3 quick tables, left rail,
-// watermark, big 2 PLAYER / PRIVATE TABLE tiles, mode row,
-// Shop · Friends · Home · Collections · Chest bottom nav.
+// column identical on desktop. Magenta/purple play-first theme.
+// Focused play area — ONLY the four playable modes are shown:
+//   2 PLAYER · 4 PLAYER · PRIVATE TABLE · OFFLINE
+// Chrome kept from the reference: top currency bar, player row,
+// left rail, watermark, Shop·Friends·Home·Collections·Chest nav.
 // Every existing action is preserved (modes, stakes, practice,
 // daily reward, friends, leaderboard, profile, sound, rooms).
 // ============================================================
@@ -21,7 +22,7 @@ import {
 import {
   NavShop, NavFriends, NavHome, NavCollections, NavChest,
   RailEvents, RailTrophy, RailClubs,
-  IconGear, IconLockGold, IconStarGold, HomeGlyph,
+  IconGear, IconStarGold, HomeGlyph,
   CrownArt, DecoDie, DecoToken, ChestArt,
 } from '@/components/ludo/icons'
 import { useLudo } from '@/stores/ludoStore'
@@ -32,7 +33,7 @@ import { AvatarRing, CoinIcon, GemIcon, LudoLogo, ModeIllustration } from '@/com
 import type { GameMode } from '@/lib/ludo/types'
 
 type LobbyTab = 'home' | 'friends' | 'collections' | 'chest' | 'shop'
-type SheetKind = null | 'table2' | 'table4' | 'private' | 'ranks'
+type SheetKind = null | 'table2' | 'table4' | 'private' | 'offline' | 'ranks'
 
 const EVENTS = [
   { icon: '💎', title: 'Season 1 is live', text: 'Climb the leaderboard and collect gems for every win.' },
@@ -79,50 +80,30 @@ function ArtPrivate() {
   )
 }
 
-/** Laurel + star — VIP tile. */
-function ArtVip() {
+/** Robot + board strip — OFFLINE tile. */
+function ArtOffline() {
   return (
-    <svg viewBox="0 0 100 62" className="h-full w-full">
-      <path d="M24 10c-9 7-11 22 2 30M76 10c9 7 11 22-2 30" fill="none" stroke="#ffe08a" strokeWidth="3.4" strokeLinecap="round" />
-      <path d="M50 10l4.6 9.6 10.6 1.4-7.8 7.2 2 10.4-9.4-5.2-9.4 5.2 2-10.4-7.8-7.2 10.6-1.4z" fill="url(#vip-g)" stroke="#fff3c4" strokeWidth="1.6" />
+    <svg viewBox="0 0 120 84" className="h-full w-full">
+      <ellipse cx="60" cy="72" rx="42" ry="8" fill="rgba(8,40,20,0.4)" />
+      <rect x="20" y="42" width="80" height="24" rx="7" fill="#fdf6e6" opacity="0.92" />
+      <rect x="20" y="42" width="20" height="24" rx="6" fill="#e5453c" />
+      <rect x="80" y="42" width="20" height="24" rx="6" fill="#46a848" />
+      <circle cx="32" cy="54" r="6.5" fill="#b02820" stroke="#fff" strokeWidth="2" />
+      <circle cx="88" cy="54" r="6.5" fill="#2f7c33" stroke="#fff" strokeWidth="2" />
+      <g>
+        <line x1="60" y1="13" x2="60" y2="20" stroke="#a7f3d0" strokeWidth="2.6" strokeLinecap="round" />
+        <circle cx="60" cy="11.5" r="3" fill="#6ee7b7" stroke="#fff" strokeWidth="1.4" />
+        <rect x="44" y="20" width="32" height="24" rx="8" fill="url(#off-g)" stroke="#fff" strokeWidth="2.4" />
+        <circle cx="54" cy="30.5" r="3.4" fill="#0e3a55" stroke="#fff" strokeWidth="1.6" />
+        <circle cx="66" cy="30.5" r="3.4" fill="#0e3a55" stroke="#fff" strokeWidth="1.6" />
+        <rect x="55" y="37" width="10" height="2.6" rx="1.3" fill="#0e3a55" opacity="0.8" />
+      </g>
       <defs>
-        <linearGradient id="vip-g" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#fff3c4" />
-          <stop offset="1" stopColor="#f0a10c" />
+        <linearGradient id="off-g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#d1fae5" />
+          <stop offset="1" stopColor="#5eead4" />
         </linearGradient>
       </defs>
-    </svg>
-  )
-}
-
-/** Trophy — STREAK STARS tile. */
-function ArtStreak() {
-  return (
-    <svg viewBox="0 0 100 62" className="h-full w-full">
-      <path d="M36 14h28v10c0 10-6 17-14 17s-14-7-14-17z" fill="url(#streak-g)" stroke="#fff3c4" strokeWidth="2" />
-      <path d="M36 16h-8c0 8 3 12 9 13M64 16h8c0 8-3 12-9 13" fill="none" stroke="#fff3c4" strokeWidth="2.6" />
-      <path d="M47 41h6v6h-6z" fill="#c47f08" />
-      <rect x="40" y="47" width="20" height="6" rx="2.5" fill="url(#streak-g)" />
-      <path d="M50 20l1.8 3.8 4.2.6-3 2.9.7 4.1-3.7-2-3.7 2 .7-4.1-3-2.9 4.2-.6z" fill="#8a5a08" />
-      <defs>
-        <linearGradient id="streak-g" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#ffe08a" />
-          <stop offset="1" stopColor="#e09b1a" />
-        </linearGradient>
-      </defs>
-    </svg>
-  )
-}
-
-/** Token cluster — TEAM UP tile. */
-function ArtTeam() {
-  return (
-    <svg viewBox="0 0 100 62" className="h-full w-full">
-      <circle cx="38" cy="22" r="11" fill="#e5453c" stroke="#fff" strokeWidth="2.4" />
-      <circle cx="60" cy="22" r="11" fill="#f7c331" stroke="#fff" strokeWidth="2.4" />
-      <circle cx="38" cy="42" r="11" fill="#46a848" stroke="#fff" strokeWidth="2.4" />
-      <circle cx="60" cy="42" r="11" fill="#2a8ee0" stroke="#fff" strokeWidth="2.4" />
-      <path d="M46 32h6m-2-2 2 2-2 2" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
@@ -136,24 +117,6 @@ function Art4P() {
       <circle cx="74" cy="20" r="8.5" fill="#46a848" stroke="#fff" strokeWidth="2.2" />
       <circle cx="58" cy="38" r="8.5" fill="#2a8ee0" stroke="#fff" strokeWidth="2.2" />
       <circle cx="74" cy="38" r="8.5" fill="#f7c331" stroke="#fff" strokeWidth="2.2" />
-    </svg>
-  )
-}
-
-/** Mini 4-color board preview for the quick table tiles. */
-function MiniBoard() {
-  return (
-    <svg viewBox="0 0 64 64" className="h-full w-full">
-      <rect x="2" y="2" width="60" height="60" rx="12" fill="#fdf6e6" />
-      <rect x="7" y="7" width="20" height="20" rx="5" fill="#e5453c" />
-      <rect x="37" y="7" width="20" height="20" rx="5" fill="#46a848" />
-      <rect x="37" y="37" width="20" height="20" rx="5" fill="#f7c331" />
-      <rect x="7" y="37" width="20" height="20" rx="5" fill="#2a8ee0" />
-      <rect x="27" y="7" width="10" height="8" rx="2" fill="#f1f5f9" />
-      <rect x="27" y="49" width="10" height="8" rx="2" fill="#f1f5f9" />
-      <rect x="7" y="27" width="8" height="10" rx="2" fill="#f1f5f9" />
-      <rect x="49" y="27" width="8" height="10" rx="2" fill="#f1f5f9" />
-      <rect x="25" y="25" width="14" height="14" rx="3" fill="#f7c331" />
     </svg>
   )
 }
@@ -195,22 +158,6 @@ function CurrencyChip({
   )
 }
 
-function RibbonLabel({ children, tone = 'gold' }: { children: React.ReactNode; tone?: 'gold' | 'violet' }) {
-  return (
-    <span
-      className={`ls-font inline-flex items-center gap-1 rounded-md px-2 py-[3px] text-[9px] leading-none tracking-wide ${
-        tone === 'gold' ? 'text-amber-100' : 'text-violet-100'
-      }`}
-      style={{
-        background: tone === 'gold' ? 'linear-gradient(180deg, rgba(70,20,10,0.85), rgba(40,10,5,0.85))' : 'rgba(28,8,52,0.85)',
-        boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12)',
-      }}
-    >
-      {children}
-    </span>
-  )
-}
-
 // ---------- main screen ----------
 
 export default function MenuScreen() {
@@ -239,7 +186,7 @@ export default function MenuScreen() {
   const [eventsOpen, setEventsOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [copied, setCopied] = useState(false)
-  const [soonFlash, setSoonFlash] = useState<string | null>(null)
+  const [offlineSeats, setOfflineSeats] = useState<2 | 4>(4)
 
   // pre-warm online connection so quick match feels instant
   useEffect(() => {
@@ -255,11 +202,6 @@ export default function MenuScreen() {
 
   const totalGames = profile.wins + profile.losses
   const winRate = totalGames > 0 ? Math.round((profile.wins / totalGames) * 100) : 0
-
-  function flashSoon(name: string) {
-    setSoonFlash(name)
-    setTimeout(() => setSoonFlash(null), 1400)
-  }
 
   function practicePlayers() {
     const botAvatars = AVATARS.filter((a) => a !== profile.avatar)
@@ -294,18 +236,6 @@ export default function MenuScreen() {
     ]
     startLocalGame({ mode: gameMode, stake: useStake, players })
     setSheet(null)
-  }
-
-  /** One-tap quick table from the top row: online if affordable, else free vs computer. */
-  function quickTable(gameMode: GameMode, useStake: number) {
-    if (busy) return
-    if (profile.coins >= useStake) {
-      setBusy(true)
-      onlineQuick(useStake, gameMode)
-      setTimeout(() => setBusy(false), 2500)
-    } else {
-      startVsComputer(gameMode, 4, 0)
-    }
   }
 
   /** Play online from a mode sheet. 2 seats = dedicated room (share code / add bot); 4 seats = quick match. */
@@ -416,8 +346,8 @@ export default function MenuScreen() {
           </div>
         </div>
 
-        {/* ============ PLAYER ROW (avatar + level + quick tables) ============ */}
-        <div className="flex items-center gap-2 px-2.5 pt-2">
+        {/* ============ PLAYER ROW (avatar + level) ============ */}
+        <div className="flex items-center gap-2.5 px-2.5 pt-2">
           <button onClick={() => setTab('collections')} className="relative shrink-0" aria-label="Open profile">
             <AvatarRing avatar={profile.avatar} size={46} />
             <span
@@ -427,7 +357,7 @@ export default function MenuScreen() {
               {lvl.level}
             </span>
           </button>
-          <div className="min-w-0 w-[92px] shrink-0">
+          <div className="min-w-0">
             <p className="ls-font truncate text-sm leading-tight text-white">{profile.name}</p>
             <span
               className="ls-font mt-1 inline-flex items-center gap-1 rounded-md px-1.5 py-[2px] text-[9px] leading-none text-white"
@@ -437,33 +367,12 @@ export default function MenuScreen() {
             </span>
           </div>
 
-          {/* quick tables */}
-          <div className="grid flex-1 grid-cols-3 gap-1.5">
-            {([
-              { mode: 'classic' as GameMode, stake: 100, caption: '100' },
-              { mode: 'quick' as GameMode, stake: 500, caption: '500' },
-              { mode: 'master' as GameMode, stake: 1000, caption: 'BIG WIN' },
-            ]).map((t) => {
-              const afford = profile.coins >= t.stake
-              return (
-                <motion.button
-                  key={t.mode}
-                  whileTap={{ scale: 0.93 }}
-                  onClick={() => quickTable(t.mode, t.stake)}
-                  className="ls-table-tile flex flex-col items-center gap-0.5 rounded-xl p-1"
-                  aria-label={`${t.mode} table, ${t.stake} coins entry`}
-                >
-                  <div className="h-[30px] w-full">
-                    <ModeIllustration kind={t.mode} size={30} />
-                  </div>
-                  <RibbonLabel>
-                    {t.caption === 'BIG WIN' ? <><Zap size={8} /> BIG WIN</> : <><CoinIcon size={9} /> {t.caption}</>}
-                    {!afford && <IconLockGold size={10} />}
-                  </RibbonLabel>
-                </motion.button>
-              )
-            })}
-          </div>
+          <span
+            className="ls-lobby-chip ls-font ml-auto inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] leading-none text-amber-100"
+            title="Your total wins"
+          >
+            <Trophy size={11} className="text-amber-300" /> {profile.wins} WINS
+          </span>
         </div>
 
         {/* ============ LEFT RAIL (events / ranks / clubs) ============ */}
@@ -586,7 +495,7 @@ export default function MenuScreen() {
             <motion.button
               whileTap={{ scale: 0.96 }}
               onClick={() => { setSheet('table2'); setSheetMode('classic') }}
-              className="ls-tile-gold ls-shine relative flex h-[min(36vw,20vh,148px)] flex-col overflow-hidden rounded-2xl p-1.5"
+              className="ls-tile-gold ls-shine relative flex h-[min(42vw,25vh,176px)] flex-col overflow-hidden rounded-2xl p-1.5"
               aria-label="Play 2 player"
             >
               <motion.span
@@ -601,7 +510,7 @@ export default function MenuScreen() {
             <motion.button
               whileTap={{ scale: 0.96 }}
               onClick={() => setSheet('private')}
-              className="ls-tile-purple ls-shine relative flex h-[min(36vw,20vh,148px)] flex-col overflow-hidden rounded-2xl p-1.5"
+              className="ls-tile-purple ls-shine relative flex h-[min(42vw,25vh,176px)] flex-col overflow-hidden rounded-2xl p-1.5"
               aria-label="Open private table"
             >
               <span className="absolute right-1.5 top-1.5 grid h-5 w-5 place-items-center rounded-full bg-black/35 text-amber-200" title="Invite with a code">
@@ -612,58 +521,28 @@ export default function MenuScreen() {
             </motion.button>
           </div>
 
-          {/* small tiles */}
-          <div className="relative z-10 mt-2.5 grid grid-cols-4 gap-2 pb-1.5">
+          {/* second row — 4 PLAYER + OFFLINE */}
+          <div className="relative z-10 mt-2.5 grid grid-cols-2 gap-2.5 pb-1.5">
             <motion.button
-              whileTap={{ scale: 0.94 }}
-              onClick={() => flashSoon('VIP Club')}
-              className="ls-tile-purple relative flex h-[min(19vw,12vh,84px)] flex-col items-center justify-center overflow-hidden rounded-xl p-1 opacity-95"
-              aria-label="VIP — coming soon"
-            >
-              <IconLockGold size={13} className="absolute right-1 top-1.5" />
-              <div className="min-h-0 w-full flex-1"><ArtVip /></div>
-            </motion.button>
-
-            <motion.button
-              whileTap={{ scale: 0.94 }}
-              onClick={() => setTab('chest')}
-              className="ls-tile-purple relative flex h-[min(19vw,12vh,84px)] flex-col items-center justify-center overflow-hidden rounded-xl p-1"
-              aria-label="Streak stars — daily rewards"
-            >
-              <div className="min-h-0 w-full flex-1"><ArtStreak /></div>
-              <span className="ls-font rounded-md bg-black/40 px-1 text-[7px] leading-[1.4] text-amber-100">LEVEL 7</span>
-            </motion.button>
-
-            <motion.button
-              whileTap={{ scale: 0.94 }}
-              onClick={() => flashSoon('Team Up')}
-              className="ls-tile-purple relative flex h-[min(19vw,12vh,84px)] flex-col items-center justify-center overflow-hidden rounded-xl p-1 opacity-95"
-              aria-label="Team up — coming soon"
-            >
-              <IconLockGold size={13} className="absolute right-1 top-1.5" />
-              <div className="min-h-0 w-full flex-1"><ArtTeam /></div>
-            </motion.button>
-
-            <motion.button
-              whileTap={{ scale: 0.94 }}
+              whileTap={{ scale: 0.96 }}
               onClick={() => { setSheet('table4'); setSheetMode('classic') }}
-              className="ls-tile-purple relative flex h-[min(19vw,12vh,84px)] flex-col items-center justify-center overflow-hidden rounded-xl p-1"
+              className="ls-tile-purple ls-shine relative flex h-[min(32vw,18vh,132px)] flex-col overflow-hidden rounded-2xl p-1.5"
               aria-label="Play 4 player"
             >
-              <div className="min-h-0 w-full flex-1"><Art4P /></div>
+              <div className="min-h-0 flex-1"><Art4P /></div>
+              <span className="ls-font pb-1 text-center text-[13px] leading-none text-white" style={{ textShadow: '0 2px 0 rgba(40,10,90,0.7)' }}>4 PLAYER</span>
+            </motion.button>
+
+            <motion.button
+              whileTap={{ scale: 0.96 }}
+              onClick={() => { setSheet('offline'); setSheetMode('classic') }}
+              className="ls-tile-green ls-shine relative flex h-[min(32vw,18vh,132px)] flex-col overflow-hidden rounded-2xl p-1.5"
+              aria-label="Play offline — bots or pass and play"
+            >
+              <div className="min-h-0 flex-1"><ArtOffline /></div>
+              <span className="ls-font pb-1 text-center text-[13px] leading-none text-white" style={{ textShadow: '0 2px 0 rgba(10,60,30,0.7)' }}>OFFLINE</span>
             </motion.button>
           </div>
-
-          {soonFlash && (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="ls-sheet absolute bottom-28 left-1/2 z-40 -translate-x-1/2 rounded-full px-4 py-2 text-xs text-white"
-            >
-              {soonFlash} — coming soon!
-            </motion.div>
-          )}
         </main>
 
         {/* ============ BOTTOM NAV ============ */}
@@ -1132,6 +1011,73 @@ export default function MenuScreen() {
                         </button>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* ---- OFFLINE SHEET ---- */}
+                {sheet === 'offline' && (
+                  <div>
+                    <div className="mb-3 flex items-center gap-2.5">
+                      <div className="h-11 w-11"><ArtOffline /></div>
+                      <div>
+                        <h3 className="ls-font text-lg leading-tight text-white">OFFLINE</h3>
+                        <p className="text-[10px] text-fuchsia-100/60">Bots or same-device friends · free, no coins needed</p>
+                      </div>
+                    </div>
+
+                    <p className="ls-font mb-1.5 text-[10px] tracking-wide text-amber-200">GAME TYPE</p>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {(['classic', 'quick', 'master'] as GameMode[]).map((m) => (
+                        <button
+                          key={m}
+                          onClick={() => setSheetMode(m)}
+                          data-active={sheetMode === m}
+                          className="ls-option ls-font flex flex-col items-center gap-1 rounded-xl py-2 text-[11px] text-white"
+                        >
+                          <ModeIllustration kind={m} size={30} />
+                          {m.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+
+                    <p className="ls-font mb-1.5 mt-3 text-[10px] tracking-wide text-amber-200">PLAYERS</p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {([2, 4] as Array<2 | 4>).map((n) => (
+                        <button
+                          key={n}
+                          onClick={() => setOfflineSeats(n)}
+                          data-active={offlineSeats === n}
+                          className="ls-option ls-font flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-[12px] text-white"
+                        >
+                          <Users size={13} /> {n} PLAYERS
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="mt-3.5 grid grid-cols-1 gap-2">
+                      <motion.button
+                        whileTap={{ scale: 0.97 }}
+                        onClick={() => startVsComputer(sheetMode, offlineSeats, 0)}
+                        className="ls-btn ls-btn-gold ls-font flex items-center justify-center gap-2 rounded-2xl py-3.5 text-base text-white"
+                      >
+                        <Bot size={18} /> VS COMPUTER
+                      </motion.button>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => startPass(sheetMode, offlineSeats, 0)}
+                          className="ls-btn ls-btn-green ls-font flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-[12px] text-white"
+                        >
+                          <Users size={14} /> PASS N PLAY
+                        </button>
+                        <button
+                          onClick={() => startLocalGame({ mode: sheetMode, stake: 0, players: practicePlayers() })}
+                          className="ls-btn ls-btn-ghost ls-font flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-[12px] text-fuchsia-50"
+                        >
+                          <Timer size={14} /> PRACTICE
+                        </button>
+                      </div>
+                    </div>
+                    <p className="mt-2.5 text-center text-[10px] text-fuchsia-100/50">Offline games are free — stakes apply to online tables only.</p>
                   </div>
                 )}
 

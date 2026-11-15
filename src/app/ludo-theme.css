@@ -66,6 +66,16 @@ body {
 }
 .ls-tile-purple:active { box-shadow: 0 2px 0 #3b1580, 0 8px 16px rgba(40, 8, 70, 0.45); }
 
+.ls-tile-green {
+  background: linear-gradient(180deg, #43c368 0%, #2f9e57 55%, #1f7d41 100%);
+  border: 2.5px solid rgba(187, 247, 208, 0.85);
+  box-shadow:
+    0 6px 0 #16632f,
+    0 14px 26px rgba(8, 50, 30, 0.5),
+    inset 0 2px 0 rgba(255, 255, 255, 0.4);
+}
+.ls-tile-green:active { box-shadow: 0 2px 0 #16632f, 0 8px 16px rgba(8, 50, 30, 0.45); }
+
 .ls-table-tile {
   background: linear-gradient(180deg, rgba(255, 253, 245, 0.16), rgba(255, 253, 245, 0.06));
   border: 2px solid rgba(255, 224, 138, 0.55);
