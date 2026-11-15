@@ -139,7 +139,7 @@ interface LudoStore {
   roll: () => Promise<void>
   clickToken: (tokenId: number) => Promise<void>
   selectDie: (i: number) => void
-  autoPlay: () => Promise<void>
+  autoPlay: (timedOut?: boolean) => Promise<void>
   leaveGame: () => void
   localRematch: () => void
   sendEmote: (emoji: string) => void
@@ -295,7 +295,8 @@ export const useLudo = create<LudoStore>((set, get) => {
   function pushFloat(text: string, kind: FloatMsg['kind'] = 'info') {
     const id = msgId++
     set((s) => ({ floatMsgs: [...s.floatMsgs, { id, text, kind }].slice(-4) }))
-    schedule(1800, () => get().clearFloat(id))
+    // independent timer — must not clash with the shared turn scheduler
+    setTimeout(() => get().clearFloat(id), 1800)
   }
 
   function startTurnTimer() {
@@ -340,7 +341,7 @@ export const useLudo = create<LudoStore>((set, get) => {
 
     if (g.phase === 'roll') {
       if (cur.isBot) {
-        schedule(700, () => void botRoll(gen))
+        schedule(400, () => void botRoll(gen))
       } else {
         set({ canRoll: true, movableTokenIds: [], selectedDie: 0, turnDeadline: null })
         startTurnTimer()
@@ -355,16 +356,18 @@ export const useLudo = create<LudoStore>((set, get) => {
         sfx.pass()
         const passed = passTurn(g)
         set({ game: passed })
-        schedule(900, () => scheduleNext())
+        schedule(550, () => scheduleNext())
         return
       }
       if (cur.isBot) {
-        schedule(600, () => void botMove(gen))
+        schedule(280, () => void botMove(gen))
         return
       }
       // human: compute movable tokens for selected die; auto-switch die if needed
       set({ canRoll: false })
       computeMovable()
+      // fresh countdown window for the move phase
+      startTurnTimer()
     }
   }
 
@@ -391,13 +394,13 @@ export const useLudo = create<LudoStore>((set, get) => {
     const steps = movePath(g0, move)
     for (const step of steps) {
       if (gen !== loopGen) return
-      await sleep(step.location === 'finished' ? 260 : 130)
+      await sleep(step.location === 'finished' ? 200 : 95)
       if (gen !== loopGen) return
       set({ game: patchToken(g0, move, step) })
       sfx.step()
     }
     if (gen !== loopGen) return
-    await sleep(120)
+    await sleep(80)
     const result = applyMove(g0, move)
     if (move.captures.length > 0) {
       sfx.capture()
@@ -418,7 +421,7 @@ export const useLudo = create<LudoStore>((set, get) => {
     if (!g || g.phase !== 'roll') return
     set({ canRoll: false, diceRolling: true })
     sfx.dice()
-    await sleep(650)
+    await sleep(450)
     if (gen !== loopGen) return
     const { state, rolled, forfeited } = rollDice(g)
     set({ game: state, diceValues: rolled, diceRolling: false, selectedDie: 0 })
@@ -427,10 +430,10 @@ export const useLudo = create<LudoStore>((set, get) => {
       pushFloat(`Three sixes! ${g.players[g.turn].name} loses the turn`, 'forfeit')
       const passed = passTurn(state)
       set({ game: passed })
-      schedule(1100, () => scheduleNext())
+      schedule(750, () => scheduleNext())
       return
     }
-    await sleep(250)
+    await sleep(140)
     if (gen !== loopGen) return
     scheduleNext()
   }
@@ -443,7 +446,7 @@ export const useLudo = create<LudoStore>((set, get) => {
     if (!move) {
       const passed = passTurn(g)
       set({ game: passed })
-      schedule(900, () => scheduleNext())
+      schedule(550, () => scheduleNext())
       return
     }
     set({ selectedDie: move.dieIndex, diceValues: [...g.dice] })
@@ -620,6 +623,8 @@ export const useLudo = create<LudoStore>((set, get) => {
       if (isMe) {
         set({ canRoll: false })
         computeMovable()
+        // fresh countdown window for the move phase
+        startTurnTimer()
       } else {
         set({ movableTokenIds: [] })
       }
@@ -799,10 +804,10 @@ export const useLudo = create<LudoStore>((set, get) => {
         pushFloat('Three sixes! Turn forfeited', 'forfeit')
         const passed = passTurn(state)
         set({ game: passed })
-        schedule(1100, () => scheduleNext())
+        schedule(750, () => scheduleNext())
         return
       }
-      await sleep(200)
+      await sleep(140)
       if (gen !== loopGen) return
       scheduleNext()
     },
@@ -842,11 +847,12 @@ export const useLudo = create<LudoStore>((set, get) => {
       }
     },
 
-    autoPlay: async () => {
+    autoPlay: async (timedOut) => {
       const s = get()
       if (!s.game || s.animating || s.diceRolling) return
       if (s.winData) return
       if (s.game.phase === 'roll' && s.canRoll) {
+        if (timedOut) pushFloat('Time up — auto rolled', 'info')
         await get().roll()
         return
       }
@@ -854,6 +860,7 @@ export const useLudo = create<LudoStore>((set, get) => {
         const g = s.game
         const best = botChooseMove(g)
         if (!best) return
+        if (timedOut) pushFloat('Time up — auto played', 'info')
         if (s.session?.online) {
           online.emit('game:move', { tokenId: best.tokenId, dieIndex: best.dieIndex })
           set({ movableTokenIds: [], animating: true })

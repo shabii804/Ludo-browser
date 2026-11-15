@@ -38,7 +38,7 @@ export const MODE_DESC: Record<string, string> = {
   master: '4 tokens · 2 dice · pro tables',
 }
 
-export const TURN_SECONDS = 15
+export const TURN_SECONDS = 10
 
 export const TABLE_THEMES = [
   { name: 'Emerald Club', bg: 'from-emerald-950 via-emerald-900 to-slate-950', felt: '#0b3d2e' },

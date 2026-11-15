@@ -1,0 +1,952 @@
+     1→// ============================================================
+     2→// Ludo game store - orchestration for local + online play
+     3→// ============================================================
+     4→
+     5→import { create } from 'zustand'
+     6→import type { Color, GameConfig, GameMode, GameState, Move, Token } from '@/lib/ludo/types'
+     7→import {
+     8→  applyMove,
+     9→  createGame,
+    10→  legalMoves,
+    11→  passTurn,
+    12→  rollDice,
+    13→  tokensPerPlayerFor,
+    14→} from '@/lib/ludo/engine'
+    15→import { botChooseMove } from '@/lib/ludo/ai'
+    16→import { START_IDX, trackIdxFor, tokenScreenPos } from '@/lib/ludo/board'
+    17→import { AVATARS, FREE_REFILL, STARTING_COINS, TURN_SECONDS } from '@/lib/ludo/constants'
+    18→import { sfx, setMuted as setSfxMuted } from '@/lib/ludo/sounds'
+    19→import { getSocket, online } from '@/lib/online/client'
+    20→
+    21→export interface Profile {
+    22→  id: string
+    23→  name: string
+    24→  avatar: string
+    25→  coins: number
+    26→  gems: number
+    27→  wins: number
+    28→  losses: number
+    29→}
+    30→
+    31→export interface Session {
+    32→  mode: GameMode
+    33→  stake: number
+    34→  online: boolean
+    35→  pot: number
+    36→  youColor: Color
+    37→  roomCode?: string
+    38→}
+    39→
+    40→export interface FloatMsg {
+    41→  id: number
+    42→  text: string
+    43→  kind: 'info' | 'capture' | 'six' | 'pass' | 'forfeit' | 'coin'
+    44→}
+    45→
+    46→export interface EmoteMsg {
+    47→  id: number
+    48→  color: Color
+    49→  emoji: string
+    50→}
+    51→
+    52→export interface ChatMsg {
+    53→  id: number
+    54→  color: Color
+    55→  name: string
+    56→  text: string
+    57→  ts: number
+    58→}
+    59→
+    60→export interface WinData {
+    61→  winner: Color
+    62→  winnerName: string
+    63→  pot: number
+    64→  youWon: boolean
+    65→  coinDelta: number
+    66→}
+    67→
+    68→export interface LobbyPlayer {
+    69→  id: string
+    70→  name: string
+    71→  avatar: string
+    72→  color: Color
+    73→  isBot: boolean
+    74→  connected: boolean
+    75→  isHost: boolean
+    76→}
+    77→
+    78→export interface LobbyInfo {
+    79→  code: string
+    80→  stake: number
+    81→  mode: GameMode
+    82→  hostId: string
+    83→  players: LobbyPlayer[]
+    84→  seats: number
+    85→}
+    86→
+    87→export interface DailyState {
+    88→  lastClaim: string
+    89→  streak: number
+    90→}
+    91→
+    92→type View = 'menu' | 'lobby' | 'game'
+    93→type MenuTab = 'computer' | 'pass' | 'online'
+    94→
+    95→interface LudoStore {
+    96→  // profile
+    97→  profile: Profile
+    98→  hydrated: boolean
+    99→  soundOn: boolean
+   100→  hydrate: () => void
+   101→  updateProfile: (patch: Partial<Profile>) => void
+   102→  addCoins: (n: number) => void
+   103→  addGems: (n: number) => void
+   104→  refillCoins: () => void
+   105→  toggleSound: () => void
+   106→  daily: DailyState | null
+   107→  claimDaily: () => void
+   108→
+   109→  // navigation
+   110→  view: View
+   111→  menuTab: MenuTab
+   112→  setMenuTab: (t: MenuTab) => void
+   113→  goto: (v: View) => void
+   114→
+   115→  // session + game
+   116→  session: Session | null
+   117→  game: GameState | null
+   118→  animating: boolean
+   119→  diceRolling: boolean
+   120→  diceValues: number[]
+   121→  canRoll: boolean
+   122→  movableTokenIds: number[]
+   123→  selectedDie: number
+   124→  floatMsgs: FloatMsg[]
+   125→  emotes: EmoteMsg[]
+   126→  chat: ChatMsg[]
+   127→  chatOpen: boolean
+   128→  winData: WinData | null
+   129→  turnDeadline: number | null
+   130→
+   131→  // online
+   132→  onlineStatus: 'idle' | 'connecting' | 'connected' | 'lobby' | 'playing' | 'error'
+   133→  onlineError: string
+   134→  lobby: LobbyInfo | null
+   135→  rematchVotes: string[]
+   136→
+   137→  // local actions
+   138→  startLocalGame: (opts: { mode: GameMode; stake: number; players: Array<{ name: string; avatar: string; isBot: boolean }> }) => void
+   139→  roll: () => Promise<void>
+   140→  clickToken: (tokenId: number) => Promise<void>
+   141→  selectDie: (i: number) => void
+   142→  autoPlay: () => Promise<void>
+   143→  leaveGame: () => void
+   144→  localRematch: () => void
+   145→  sendEmote: (emoji: string) => void
+   146→  sendChat: (text: string) => void
+   147→  setChatOpen: (open: boolean) => void
+   148→  clearFloat: (id: number) => void
+   149→
+   150→  // online actions
+   151→  onlineConnect: () => void
+   152→  onlineCreate: (opts: { stake: number; mode: GameMode; seats: number; botFill: boolean }) => void
+   153→  onlineJoin: (code: string, stake: number, mode: GameMode) => void
+   154→  onlineQuick: (stake: number, mode: GameMode) => void
+   155→  onlineAddBot: () => void
+   156→  onlineStart: () => void
+   157→  onlineLeave: () => void
+   158→  onlineRematch: () => void
+   159→}
+   160→
+   161→// ---------- helpers ----------
+   162→
+   163→let msgId = 1
+   164→let loopGen = 0
+   165→let pendingTimer: ReturnType<typeof setTimeout> | null = null
+   166→
+   167→const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
+   168→
+   169→function uid() {
+   170→  return Math.random().toString(36).slice(2, 10)
+   171→}
+   172→
+   173→const DEFAULT_PROFILE: Profile = {
+   174→  id: '',
+   175→  name: 'Player',
+   176→  avatar: AVATARS[0],
+   177→  coins: STARTING_COINS,
+   178→  gems: 20,
+   179→  wins: 0,
+   180→  losses: 0,
+   181→}
+   182→
+   183→function loadProfile(): Profile {
+   184→  if (typeof window === 'undefined') return { ...DEFAULT_PROFILE, id: 'ssr' }
+   185→  try {
+   186→    const raw = localStorage.getItem('ludo.profile.v1')
+   187→    if (raw) {
+   188→      const p = JSON.parse(raw) as Partial<Profile>
+   189→      return { ...DEFAULT_PROFILE, ...p, gems: typeof p.gems === 'number' ? p.gems : 20 }
+   190→    }
+   191→  } catch {
+   192→    /* ignore */
+   193→  }
+   194→  return {
+   195→    ...DEFAULT_PROFILE,
+   196→    id: uid(),
+   197→    name: 'Player' + Math.floor(100 + Math.random() * 900),
+   198→    avatar: AVATARS[Math.floor(Math.random() * AVATARS.length)],
+   199→  }
+   200→}
+   201→
+   202→function loadDaily(): DailyState | null {
+   203→  if (typeof window === 'undefined') return null
+   204→  try {
+   205→    const raw = localStorage.getItem('ludo.daily.v1')
+   206→    if (raw) return JSON.parse(raw) as DailyState
+   207→  } catch {
+   208→    /* ignore */
+   209→  }
+   210→  return null
+   211→}
+   212→
+   213→function saveDaily(d: DailyState) {
+   214→  if (typeof window !== 'undefined') {
+   215→    try {
+   216→      localStorage.setItem('ludo.daily.v1', JSON.stringify(d))
+   217→    } catch {
+   218→      /* ignore */
+   219→    }
+   220→  }
+   221→}
+   222→
+   223→function todayStr(offsetDays = 0) {
+   224→  return new Date(Date.now() + offsetDays * 86400000).toLocaleDateString('en-CA')
+   225→}
+   226→
+   227→export const DAILY_REWARDS = [200, 300, 500, 750, 1000, 1500, 2500]
+   228→
+   229→function saveProfile(p: Profile) {
+   230→  if (typeof window !== 'undefined') {
+   231→    try {
+   232→      localStorage.setItem('ludo.profile.v1', JSON.stringify(p))
+   233→    } catch {
+   234→      /* ignore */
+   235→    }
+   236→  }
+   237→}
+   238→
+   239→function schedule(ms: number, fn: () => void) {
+   240→  if (pendingTimer) clearTimeout(pendingTimer)
+   241→  pendingTimer = setTimeout(fn, ms)
+   242→}
+   243→
+   244→function cancelSchedule() {
+   245→  if (pendingTimer) clearTimeout(pendingTimer)
+   246→  pendingTimer = null
+   247→}
+   248→
+   249→/** Walk of intermediate positions for a move (for step animation). */
+   250→function movePath(game: GameState, move: Move): Array<{ location: 'track' | 'home' | 'finished'; trackIdx: number; homeStep: number }> {
+   251→  const color = game.players[game.turn].color
+   252→  const token = game.players[game.turn].tokens[move.tokenId]
+   253→  const die = game.dice[move.dieIndex]
+   254→  const from = token.location === 'yard' ? -1 : token.location === 'home' ? 50 + token.homeStep : token.location === 'finished' ? 56 : token.progress
+   255→  const to = token.location === 'yard' ? 0 : Math.min(from + die, 56)
+   256→  const steps: Array<{ location: 'track' | 'home' | 'finished'; trackIdx: number; homeStep: number }> = []
+   257→  for (let p = from + 1; p <= to; p++) {
+   258→    if (p <= 50) steps.push({ location: 'track', trackIdx: trackIdxFor(color, p), homeStep: 0 })
+   259→    else if (p < 56) steps.push({ location: 'home', trackIdx: -1, homeStep: p - 50 })
+   260→    else steps.push({ location: 'finished', trackIdx: -1, homeStep: 0 })
+   261→  }
+   262→  return steps
+   263→}
+   264→
+   265→function patchToken(game: GameState, move: Move, step: { location: string; trackIdx: number; homeStep: number }): GameState {
+   266→  const pIdx = game.turn
+   267→  return {
+   268→    ...game,
+   269→    players: game.players.map((p, i) =>
+   270→      i !== pIdx
+   271→        ? p
+   272→        : {
+   273→            ...p,
+   274→            tokens: p.tokens.map((t) =>
+   275→              t.id === move.tokenId ? { ...t, location: step.location as Token['location'], trackIdx: step.trackIdx, homeStep: step.homeStep } : t
+   276→            ),
+   277→          }
+   278→    ),
+   279→  }
+   280→}
+   281→
+   282→/** Move payload relayed by the online server (color + die value included). */
+   283→interface OnlineMove {
+   284→  tokenId: number
+   285→  dieIndex: number
+   286→  die: number
+   287→  color: Color
+   288→  captures: number[]
+   289→  finishes: boolean
+   290→}
+   291→
+   292→export const useLudo = create<LudoStore>((set, get) => {
+   293→  // ---- core flow helpers (defined inside create for set/get access) ----
+   294→
+   295→  function pushFloat(text: string, kind: FloatMsg['kind'] = 'info') {
+   296→    const id = msgId++
+   297→    set((s) => ({ floatMsgs: [...s.floatMsgs, { id, text, kind }].slice(-4) }))
+   298→    schedule(1800, () => get().clearFloat(id))
+   299→  }
+   300→
+   301→  function startTurnTimer() {
+   302→    set({ turnDeadline: Date.now() + TURN_SECONDS * 1000 })
+   303→  }
+   304→
+   305→  function finishGame(result: GameState) {
+   306→    const session = get().session
+   307→    if (!session || !result.winner) return
+   308→    const winnerPlayer = result.players.find((p) => p.color === result.winner)
+   309→    const youWon = result.winner === session.youColor
+   310→    const pot = session.pot
+   311→    const coinDelta = youWon ? pot : 0
+   312→    if (youWon) {
+   313→      get().addCoins(pot)
+   314→      sfx.win()
+   315→      set((s) => ({ profile: { ...s.profile, wins: s.profile.wins + 1, gems: s.profile.gems + 2 } }))
+   316→      setTimeout(() => get().updateProfile({}), 0)
+   317→    } else {
+   318→      sfx.lose()
+   319→      set((s) => ({ profile: { ...s.profile, losses: s.profile.losses + 1 } }))
+   320→      setTimeout(() => get().updateProfile({}), 0)
+   321→    }
+   322→    cancelSchedule()
+   323→    set({
+   324→      winData: { winner: result.winner, winnerName: winnerPlayer?.name ?? result.winner, pot, youWon, coinDelta },
+   325→      animating: false,
+   326→      canRoll: false,
+   327→      movableTokenIds: [],
+   328→      turnDeadline: null,
+   329→    })
+   330→    saveProfile(get().profile)
+   331→  }
+   332→
+   333→  /** After every applied move / pass: decide who acts next (local games only). */
+   334→  function scheduleNext() {
+   335→    const s = get()
+   336→    if (!s.game || s.game.phase === 'gameover' || s.session?.online) return
+   337→    const gen = ++loopGen
+   338→    const g = s.game
+   339→    const cur = g.players[g.turn]
+   340→
+   341→    if (g.phase === 'roll') {
+   342→      if (cur.isBot) {
+   343→        schedule(700, () => void botRoll(gen))
+   344→      } else {
+   345→        set({ canRoll: true, movableTokenIds: [], selectedDie: 0, turnDeadline: null })
+   346→        startTurnTimer()
+   347→      }
+   348→      return
+   349→    }
+   350→
+   351→    if (g.phase === 'move') {
+   352→      const moves = legalMoves(g)
+   353→      if (moves.length === 0) {
+   354→        pushFloat(cur.isBot ? `${cur.name} has no move` : 'No possible move', 'pass')
+   355→        sfx.pass()
+   356→        const passed = passTurn(g)
+   357→        set({ game: passed })
+   358→        schedule(900, () => scheduleNext())
+   359→        return
+   360→      }
+   361→      if (cur.isBot) {
+   362→        schedule(600, () => void botMove(gen))
+   363→        return
+   364→      }
+   365→      // human: compute movable tokens for selected die; auto-switch die if needed
+   366→      set({ canRoll: false })
+   367→      computeMovable()
+   368→    }
+   369→  }
+   370→
+   371→  function computeMovable() {
+   372→    const g = get().game
+   373→    if (!g || g.phase !== 'move') return
+   374→    let dieIdx = get().selectedDie
+   375→    let moves = legalMoves(g).filter((m) => m.dieIndex === dieIdx)
+   376→    if (moves.length === 0) {
+   377→      // auto-switch to a die that has moves
+   378→      const all = legalMoves(g)
+   379→      if (all.length > 0) {
+   380→        dieIdx = all[0].dieIndex
+   381→        set({ selectedDie: dieIdx })
+   382→        moves = all.filter((m) => m.dieIndex === dieIdx)
+   383→      }
+   384→    }
+   385→    set({ movableTokenIds: [...new Set(moves.map((m) => m.tokenId))] })
+   386→  }
+   387→
+   388→  async function animateAndApply(g0: GameState, move: Move) {
+   389→    const gen = loopGen
+   390→    set({ animating: true, movableTokenIds: [], canRoll: false, turnDeadline: null })
+   391→    const steps = movePath(g0, move)
+   392→    for (const step of steps) {
+   393→      if (gen !== loopGen) return
+   394→      await sleep(step.location === 'finished' ? 260 : 130)
+   395→      if (gen !== loopGen) return
+   396→      set({ game: patchToken(g0, move, step) })
+   397→      sfx.step()
+   398→    }
+   399→    if (gen !== loopGen) return
+   400→    await sleep(120)
+   401→    const result = applyMove(g0, move)
+   402→    if (move.captures.length > 0) {
+   403→      sfx.capture()
+   404→      pushFloat(`Captured ${move.captures.length} token${move.captures.length > 1 ? 's' : ''}!`, 'capture')
+   405→    }
+   406→    if (move.finishes) sfx.finish()
+   407→    set({ game: result, animating: false, diceValues: [] })
+   408→    if (result.phase === 'gameover' && result.winner) {
+   409→      finishGame(result)
+   410→      return
+   411→    }
+   412→    scheduleNext()
+   413→  }
+   414→
+   415→  async function botRoll(gen: number) {
+   416→    if (gen !== loopGen) return
+   417→    const g = get().game
+   418→    if (!g || g.phase !== 'roll') return
+   419→    set({ canRoll: false, diceRolling: true })
+   420→    sfx.dice()
+   421→    await sleep(650)
+   422→    if (gen !== loopGen) return
+   423→    const { state, rolled, forfeited } = rollDice(g)
+   424→    set({ game: state, diceValues: rolled, diceRolling: false, selectedDie: 0 })
+   425→    if (rolled[0] === 6 || (state.mode === 'master' && rolled.every((d) => d === 6))) sfx.six()
+   426→    if (forfeited) {
+   427→      pushFloat(`Three sixes! ${g.players[g.turn].name} loses the turn`, 'forfeit')
+   428→      const passed = passTurn(state)
+   429→      set({ game: passed })
+   430→      schedule(1100, () => scheduleNext())
+   431→      return
+   432→    }
+   433→    await sleep(250)
+   434→    if (gen !== loopGen) return
+   435→    scheduleNext()
+   436→  }
+   437→
+   438→  async function botMove(gen: number) {
+   439→    if (gen !== loopGen) return
+   440→    const g = get().game
+   441→    if (!g || g.phase !== 'move') return
+   442→    const move = botChooseMove(g)
+   443→    if (!move) {
+   444→      const passed = passTurn(g)
+   445→      set({ game: passed })
+   446→      schedule(900, () => scheduleNext())
+   447→      return
+   448→    }
+   449→    set({ selectedDie: move.dieIndex, diceValues: [...g.dice] })
+   450→    await animateAndApply(g, move)
+   451→  }
+   452→
+   453→  // ---- online event wiring ----
+   454→
+   455→  function wireOnline() {
+   456→    const sock = getSocket()
+   457→    sock.off('connect')
+   458→    sock.off('disconnect')
+   459→    sock.on('connect', () => {
+   460→      set((s) => ({ onlineStatus: s.lobby ? 'lobby' : 'connected', onlineError: '' }))
+   461→    })
+   462→    sock.on('disconnect', () => {
+   463→      set((s) => (s.onlineStatus === 'playing' ? { onlineStatus: 'playing' } : { onlineStatus: 'idle' }))
+   464→    })
+   465→    online.on('lobby:created', ({ code }: { code: string }) => {
+   466→      set({ onlineStatus: 'lobby', view: 'lobby' })
+   467→    })
+   468→    online.on('lobby:update', ({ room }: { room: LobbyInfo }) => {
+   469→      set((s) => ({
+   470→        onlineStatus: 'lobby',
+   471→        lobby: room,
+   472→        onlineError: '',
+   473→        view: s.view === 'game' ? 'game' : 'lobby',
+   474→      }))
+   475→    })
+   476→    online.on('lobby:error', ({ message }: { message: string }) => {
+   477→      set({ onlineError: message })
+   478→    })
+   479→    online.on('game:started', ({ state, yourColor, roomCode, stake }: { state: GameState; yourColor: Color; roomCode: string; stake: number }) => {
+   480→      loopGen++
+   481→      cancelSchedule()
+   482→      const pot = stake * state.players.length
+   483→      const me = get().profile
+   484→      set({
+   485→        view: 'game',
+   486→        session: { mode: state.mode, stake, online: true, pot, youColor: yourColor, roomCode },
+   487→        game: state,
+   488→        onlineStatus: 'playing',
+   489→        winData: null,
+   490→        animating: false,
+   491→        diceRolling: false,
+   492→        diceValues: [],
+   493→        canRoll: false,
+   494→        movableTokenIds: [],
+   495→        selectedDie: 0,
+   496→        chat: [],
+   497→        floatMsgs: [],
+   498→        rematchVotes: [],
+   499→        lobby: null,
+   500→        turnDeadline: null,
+   501→      })
+   502→      get().addCoins(-stake) // pay entry
+   503→      sfx.coin()
+   504→      void me
+   505→      // drive my turn if it starts now
+   506→      setTimeout(() => scheduleNextOnline(), 400)
+   507→    })
+   508→    online.on('game:rolled', ({ state, rolled, forfeited }: { state: GameState; rolled: number[]; forfeited: boolean }) => {
+   509→      const gen = ++loopGen
+   510→      cancelSchedule()
+   511→      set({ game: state, diceValues: rolled, diceRolling: false, canRoll: false, selectedDie: 0 })
+   512→      if (rolled[0] === 6) sfx.six()
+   513→      if (forfeited) {
+   514→        pushFloat('Three sixes! Turn forfeited', 'forfeit')
+   515→      }
+   516→      setTimeout(() => scheduleNextOnline(), 300)
+   517→      void gen
+   518→    })
+   519→    online.on('game:moved', ({ state, move }: { state: GameState; move: OnlineMove }) => {
+   520→      // replay animation from previous visible state, then snap to authoritative state
+   521→      const g0 = get().game
+   522→      const gen = ++loopGen
+   523→      cancelSchedule()
+   524→      if (g0 && move) {
+   525→        void (async () => {
+   526→          set({ animating: true, movableTokenIds: [] })
+   527→          const steps = movePathForOnline(g0, move)
+   528→          for (const step of steps) {
+   529→            if (gen !== loopGen) return
+   530→            await sleep(step.location === 'finished' ? 260 : 130)
+   531→            if (gen !== loopGen) return
+   532→            set({ game: patchTokenOnline(g0, move, step) })
+   533→            sfx.step()
+   534→          }
+   535→          if (gen !== loopGen) return
+   536→          if (move.captures.length > 0) {
+   537→            sfx.capture()
+   538→            pushFloat('Capture!', 'capture')
+   539→          }
+   540→          if (move.finishes) sfx.finish()
+   541→          set({ game: state, animating: false, diceValues: [] })
+   542→          setTimeout(() => scheduleNextOnline(), 250)
+   543→        })()
+   544→      } else {
+   545→        set({ game: state, animating: false })
+   546→        setTimeout(() => scheduleNextOnline(), 250)
+   547→      }
+   548→    })
+   549→    online.on('game:passed', ({ state, reason }: { state: GameState; reason?: string }) => {
+   550→      set({ game: state, diceValues: [] })
+   551→      pushFloat(reason === 'forfeit' ? 'Three sixes! Turn forfeited' : 'No possible move', reason === 'forfeit' ? 'forfeit' : 'pass')
+   552→      sfx.pass()
+   553→      setTimeout(() => scheduleNextOnline(), 300)
+   554→    })
+   555→    online.on('game:state', ({ state }: { state: GameState }) => {
+   556→      // full authoritative sync (bot takeover, reconnect)
+   557→      const gen = ++loopGen
+   558→      cancelSchedule()
+   559→      set({ game: state, animating: false, diceRolling: false, diceValues: [], movableTokenIds: [] })
+   560→      void gen
+   561→      setTimeout(() => scheduleNextOnline(), 300)
+   562→    })
+   563→    online.on('game:over', ({ winner, winnerName, pot }: { winner: Color; winnerName: string; pot: number }) => {
+   564→      const session = get().session
+   565→      if (!session) return
+   566→      const youWon = winner === session.youColor
+   567→      if (youWon) {
+   568→        get().addCoins(pot)
+   569→        sfx.win()
+   570→        set((s) => ({ profile: { ...s.profile, wins: s.profile.wins + 1, gems: s.profile.gems + 2 } }))
+   571→      } else {
+   572→        sfx.lose()
+   573→        set((s) => ({ profile: { ...s.profile, losses: s.profile.losses + 1 } }))
+   574→      }
+   575→      saveProfile(get().profile)
+   576→      set({
+   577→        winData: { winner, winnerName, pot, youWon, coinDelta: youWon ? pot : 0 },
+   578→        canRoll: false,
+   579→        movableTokenIds: [],
+   580→        animating: false,
+   581→        turnDeadline: null,
+   582→      })
+   583→    })
+   584→    online.on('game:chat', (msg: { color: Color; name: string; text: string }) => {
+   585→      set((s) => ({ chat: [...s.chat, { id: msgId++, color: msg.color, name: msg.name, text: msg.text, ts: Date.now() }].slice(-50) }))
+   586→    })
+   587→    online.on('game:emote', ({ color, emoji }: { color: Color; emoji: string }) => {
+   588→      sfx.emote()
+   589→      set((s) => ({ emotes: [...s.emotes, { id: msgId++, color, emoji }].slice(-6) }))
+   590→    })
+   591→    online.on('game:rematch', ({ votes }: { votes: string[] }) => {
+   592→      set({ rematchVotes: votes })
+   593→      if (votes.length > 0) pushFloat('Rematch requested', 'info')
+   594→    })
+   595→    online.on('room:closed', ({ reason }: { reason: string }) => {
+   596→      set({ onlineStatus: 'idle', lobby: null, session: null, game: null, view: 'menu', onlineError: reason || 'Room closed' })
+   597→    })
+   598→    online.on('connect_error', () => {
+   599→      set({ onlineError: 'Cannot reach game server. Try again shortly.' })
+   600→    })
+   601→  }
+   602→
+   603→  /** Online equivalent of scheduleNext: only enables local input; bots are server-driven. */
+   604→  function scheduleNextOnline() {
+   605→    const s = get()
+   606→    if (!s.game || s.game.phase === 'gameover' || !s.session?.online) return
+   607→    const g = s.game
+   608→    const cur = g.players[g.turn]
+   609→    const isMe = cur.color === s.session.youColor && !cur.isBot
+   610→    if (g.phase === 'roll') {
+   611→      if (isMe) {
+   612→        set({ canRoll: true })
+   613→        startTurnTimer()
+   614→      } else {
+   615→        set({ canRoll: false })
+   616→      }
+   617→      return
+   618→    }
+   619→    if (g.phase === 'move') {
+   620→      if (isMe) {
+   621→        set({ canRoll: false })
+   622→        computeMovable()
+   623→      } else {
+   624→        set({ movableTokenIds: [] })
+   625→      }
+   626→    }
+   627→  }
+   628→
+   629→  function movePathForOnline(g0: GameState, move: OnlineMove) {
+   630→    // find moving token in current display state (turn might differ from server snapshot ordering)
+   631→    const color = move.color
+   632→    const token = g0.players.find((p) => p.color === color)?.tokens[move.tokenId]
+   633→    if (!token) return []
+   634→    const die = move.die
+   635→    const from = token.location === 'yard' ? -1 : token.location === 'home' ? 50 + token.homeStep : token.location === 'finished' ? 56 : token.progress
+   636→    const to = token.location === 'yard' ? 0 : Math.min(from + die, 56)
+   637→    const steps: Array<{ location: 'track' | 'home' | 'finished'; trackIdx: number; homeStep: number }> = []
+   638→    for (let p = from + 1; p <= to; p++) {
+   639→      if (p <= 50) steps.push({ location: 'track', trackIdx: trackIdxFor(color, p), homeStep: 0 })
+   640→      else if (p < 56) steps.push({ location: 'home', trackIdx: -1, homeStep: p - 50 })
+   641→      else steps.push({ location: 'finished', trackIdx: -1, homeStep: 0 })
+   642→    }
+   643→    return steps
+   644→  }
+   645→
+   646→  function patchTokenOnline(g0: GameState, move: OnlineMove, step: { location: string; trackIdx: number; homeStep: number }) {
+   647→    return {
+   648→      ...g0,
+   649→      players: g0.players.map((p) =>
+   650→        p.color !== move.color
+   651→          ? p
+   652→          : {
+   653→              ...p,
+   654→              tokens: p.tokens.map((t) =>
+   655→                t.id === move.tokenId ? { ...t, location: step.location as Token['location'], trackIdx: step.trackIdx, homeStep: step.homeStep } : t
+   656→              ),
+   657→            }
+   658→      ),
+   659→    }
+   660→  }
+   661→
+   662→  return {
+   663→    profile: { ...DEFAULT_PROFILE },
+   664→    hydrated: false,
+   665→    soundOn: true,
+   666→    daily: null,
+   667→    hydrate: () => {
+   668→      const p = loadProfile()
+   669→      set({ profile: p, daily: loadDaily(), hydrated: true })
+   670→    },
+   671→    updateProfile: (patch) => {
+   672→      set((s) => {
+   673→        const p = { ...s.profile, ...patch }
+   674→        saveProfile(p)
+   675→        return { profile: p }
+   676→      })
+   677→    },
+   678→    addCoins: (n) => {
+   679→      set((s) => {
+   680→        const p = { ...s.profile, coins: Math.max(0, s.profile.coins + n) }
+   681→        saveProfile(p)
+   682→        return { profile: p }
+   683→      })
+   684→    },
+   685→    addGems: (n) => {
+   686→      set((s) => {
+   687→        const p = { ...s.profile, gems: Math.max(0, s.profile.gems + n) }
+   688→        saveProfile(p)
+   689→        return { profile: p }
+   690→      })
+   691→    },
+   692→    claimDaily: () => {
+   693→      const today = todayStr()
+   694→      const d = get().daily
+   695→      if (d?.lastClaim === today) return
+   696→      const streak = d?.lastClaim === todayStr(-1) ? Math.min(7, d.streak + 1) : 1
+   697→      const next = { lastClaim: today, streak }
+   698→      set({ daily: next })
+   699→      saveDaily(next)
+   700→      get().addCoins(DAILY_REWARDS[streak - 1])
+   701→      sfx.coin()
+   702→    },
+   703→    refillCoins: () => {
+   704→      get().addCoins(FREE_REFILL)
+   705→      sfx.coin()
+   706→    },
+   707→    toggleSound: () => {
+   708→      const next = !get().soundOn
+   709→      setSfxMuted(!next)
+   710→      set({ soundOn: next })
+   711→    },
+   712→
+   713→    view: 'menu',
+   714→    menuTab: 'computer',
+   715→    setMenuTab: (t) => set({ menuTab: t }),
+   716→    goto: (v) => set({ view: v }),
+   717→
+   718→    session: null,
+   719→    game: null,
+   720→    animating: false,
+   721→    diceRolling: false,
+   722→    diceValues: [],
+   723→    canRoll: false,
+   724→    movableTokenIds: [],
+   725→    selectedDie: 0,
+   726→    floatMsgs: [],
+   727→    emotes: [],
+   728→    chat: [],
+   729→    chatOpen: false,
+   730→    winData: null,
+   731→    turnDeadline: null,
+   732→
+   733→    onlineStatus: 'idle',
+   734→    onlineError: '',
+   735→    lobby: null,
+   736→    rematchVotes: [],
+   737→
+   738→    startLocalGame: ({ mode, stake, players }) => {
+   739→      loopGen++
+   740→      cancelSchedule()
+   741→      const me = get().profile
+   742→      const seatColors: Color[] = ['red', 'green', 'yellow', 'blue']
+   743→      const config: GameConfig = {
+   744→        mode,
+   745→        players: players.map((p, i) => ({
+   746→          color: seatColors[i],
+   747→          name: p.name,
+   748→          avatar: p.avatar,
+   749→          isBot: p.isBot,
+   750→        })),
+   751→      }
+   752→      const state = createGame(config)
+   753→      const tpp = tokensPerPlayerFor(mode)
+   754→      set({
+   755→        view: 'game',
+   756→        session: { mode, stake, online: false, pot: stake * players.length, youColor: 'red' },
+   757→        game: state,
+   758→        winData: null,
+   759→        animating: false,
+   760→        diceRolling: false,
+   761→        diceValues: [],
+   762→        canRoll: false,
+   763→        movableTokenIds: [],
+   764→        selectedDie: 0,
+   765→        floatMsgs: [],
+   766→        emotes: [],
+   767→        chat: [],
+   768→        chatOpen: false,
+   769→        turnDeadline: null,
+   770→        rematchVotes: [],
+   771→        onlineStatus: 'idle',
+   772→      })
+   773→      get().addCoins(-stake)
+   774→      sfx.coin()
+   775→      void tpp
+   776→      void me
+   777→      scheduleNext()
+   778→    },
+   779→
+   780→    roll: async () => {
+   781→      const s = get()
+   782→      if (!s.game || s.animating || s.diceRolling || !s.canRoll) return
+   783→      const g = s.game
+   784→      if (s.session?.online) {
+   785→        set({ canRoll: false, diceRolling: true })
+   786→        sfx.dice()
+   787→        online.emit('game:roll')
+   788→        return
+   789→      }
+   790→      const gen = ++loopGen
+   791→      set({ canRoll: false, diceRolling: true })
+   792→      sfx.dice()
+   793→      await sleep(650)
+   794→      if (gen !== loopGen) return
+   795→      const { state, rolled, forfeited } = rollDice(g)
+   796→      set({ game: state, diceValues: rolled, diceRolling: false, selectedDie: 0 })
+   797→      if (rolled[0] === 6) sfx.six()
+   798→      if (forfeited) {
+   799→        pushFloat('Three sixes! Turn forfeited', 'forfeit')
+   800→        const passed = passTurn(state)
+   801→        set({ game: passed })
+   802→        schedule(1100, () => scheduleNext())
+   803→        return
+   804→      }
+   805→      await sleep(200)
+   806→      if (gen !== loopGen) return
+   807→      scheduleNext()
+   808→    },
+   809→
+   810→    clickToken: async (tokenId) => {
+   811→      const s = get()
+   812→      if (!s.game || s.animating) return
+   813→      const g = s.game
+   814→      if (g.players[g.turn].isBot) return
+   815→      if (!s.movableTokenIds.includes(tokenId)) return
+   816→
+   817→      const dieIdx = s.selectedDie
+   818→      let move = legalMoves(g).find((m) => m.tokenId === tokenId && m.dieIndex === dieIdx)
+   819→      if (!move) {
+   820→        // token can move with the other die -> auto switch
+   821→        move = legalMoves(g).find((m) => m.tokenId === tokenId)
+   822→        if (!move) return
+   823→        set({ selectedDie: move.dieIndex })
+   824→      }
+   825→      if (s.session?.online) {
+   826→        set({ movableTokenIds: [], animating: true })
+   827→        online.emit('game:move', { tokenId: move.tokenId, dieIndex: move.dieIndex })
+   828→        return
+   829→      }
+   830→      await animateAndApply(g, move)
+   831→    },
+   832→
+   833→    selectDie: (i) => {
+   834→      const s = get()
+   835→      if (!s.game) return
+   836→      if (s.game.usedDice.includes(i)) return
+   837→      set({ selectedDie: i })
+   838→      if (s.session?.online) {
+   839→        if (s.game.players[s.game.turn].color === s.session.youColor) computeMovable()
+   840→      } else {
+   841→        computeMovable()
+   842→      }
+   843→    },
+   844→
+   845→    autoPlay: async () => {
+   846→      const s = get()
+   847→      if (!s.game || s.animating || s.diceRolling) return
+   848→      if (s.winData) return
+   849→      if (s.game.phase === 'roll' && s.canRoll) {
+   850→        await get().roll()
+   851→        return
+   852→      }
+   853→      if (s.game.phase === 'move' && s.movableTokenIds.length > 0) {
+   854→        const g = s.game
+   855→        const best = botChooseMove(g)
+   856→        if (!best) return
+   857→        if (s.session?.online) {
+   858→          online.emit('game:move', { tokenId: best.tokenId, dieIndex: best.dieIndex })
+   859→          set({ movableTokenIds: [], animating: true })
+   860→          return
+   861→        }
+   862→        set({ selectedDie: best.dieIndex })
+   863→        await animateAndApply(g, best)
+   864→      }
+   865→    },
+   866→
+   867→    leaveGame: () => {
+   868→      loopGen++
+   869→      cancelSchedule()
+   870→      if (get().session?.online) online.emit('game:leave')
+   871→      const s = get()
+   872→      // refund stake in unfinished local games
+   873→      if (s.session && !s.session.online && !s.winData && s.game?.phase !== 'gameover') {
+   874→        get().addCoins(s.session.stake)
+   875→      }
+   876→      set({ view: 'menu', game: null, session: null, winData: null, animating: false, diceRolling: false, canRoll: false, movableTokenIds: [], floatMsgs: [], emotes: [], chat: [], turnDeadline: null, onlineStatus: 'idle', lobby: null })
+   877→    },
+   878→
+   879→    localRematch: () => {
+   880→      const s = get()
+   881→      if (!s.session || s.session.online) return
+   882→      const players = s.game
+   883→        ? s.game.players.map((p) => ({ name: p.name, avatar: p.avatar, isBot: p.isBot }))
+   884→        : []
+   885→      get().startLocalGame({ mode: s.session.mode, stake: s.session.stake, players })
+   886→    },
+   887→
+   888→    sendEmote: (emoji) => {
+   889→      const s = get()
+   890→      const color = s.session?.youColor ?? (s.game ? s.game.players[s.game.turn].color : 'red')
+   891→      sfx.emote()
+   892→      set((st) => ({ emotes: [...st.emotes, { id: msgId++, color, emoji }].slice(-6) }))
+   893→      if (s.session?.online) online.emit('game:emote', { emoji })
+   894→    },
+   895→
+   896→    sendChat: (text) => {
+   897→      const s = get()
+   898→      if (!text.trim()) return
+   899→      const color = s.session?.youColor ?? (s.game ? s.game.players[s.game.turn].color : 'red')
+   900→      set((st) => ({ chat: [...st.chat, { id: msgId++, color, name: s.profile.name, text: text.trim(), ts: Date.now() }].slice(-50) }))
+   901→      if (s.session?.online) online.emit('game:chat', { text: text.trim() })
+   902→    },
+   903→
+   904→    setChatOpen: (open) => set({ chatOpen: open }),
+   905→
+   906→    clearFloat: (id) => set((s) => ({ floatMsgs: s.floatMsgs.filter((m) => m.id !== id) })),
+   907→
+   908→    // ---- online ----
+   909→    onlineConnect: () => {
+   910→      if (get().onlineStatus === 'connecting' || get().onlineStatus === 'lobby') return
+   911→      set({ onlineStatus: 'connecting', onlineError: '' })
+   912→      wireOnline()
+   913→      online.connect()
+   914→      // socket may already be connected (e.g. returning from a finished game):
+   915→      // 'connect' will not re-fire, so resolve the status immediately.
+   916→      if (online.connected()) {
+   917→        set((s) => ({ onlineStatus: s.lobby ? 'lobby' : 'connected' }))
+   918→      }
+   919→    },
+   920→    onlineCreate: ({ stake, mode, seats, botFill }) => {
+   921→      const p = get().profile
+   922→      online.emit('lobby:create', { profile: { id: p.id, name: p.name, avatar: p.avatar, coins: p.coins }, stake, mode, seats, botFill })
+   923→    },
+   924→    onlineJoin: (code, stake, mode) => {
+   925→      const p = get().profile
+   926→      online.emit('lobby:join', { code: code.trim().toUpperCase(), profile: { id: p.id, name: p.name, avatar: p.avatar, coins: p.coins }, stake, mode })
+   927→    },
+   928→    onlineQuick: (stake, mode) => {
+   929→      const p = get().profile
+   930→      set({ onlineError: '' })
+   931→      online.emit('lobby:quick', { profile: { id: p.id, name: p.name, avatar: p.avatar, coins: p.coins }, stake, mode })
+   932→    },
+   933→    onlineAddBot: () => {
+   934→      online.emit('lobby:addbot')
+   935→    },
+   936→    onlineStart: () => {
+   937→      online.emit('lobby:start')
+   938→    },
+   939→    onlineLeave: () => {
+   940→      online.emit('lobby:leave')
+   941→      set({ onlineStatus: 'idle', lobby: null, view: 'menu' })
+   942→    },
+   943→    onlineRematch: () => {
+   944→      online.emit('game:rematch')
+   945→    },
+   946→  }
+   947→})
+   948→
+   949→// extra types used by online helpers
+   950→void tokenScreenPos
+   951→void START_IDX
+   952→

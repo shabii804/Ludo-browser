@@ -6,7 +6,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { LogOut, Volume2, VolumeX } from 'lucide-react'
+import { LogOut, Timer, Volume2, VolumeX } from 'lucide-react'
 import Board from '@/components/ludo/Board'
 import PlayerCard, { type PlayerCardData } from '@/components/ludo/PlayerCard'
 import { ChatPanel, EmoteBar } from '@/components/ludo/EmoteBar'
@@ -69,7 +69,7 @@ export default function GameScreen() {
   useEffect(() => {
     if (!turnDeadline || !game || winData) return
     if (now < turnDeadline) return
-    void autoPlay()
+    void autoPlay(true)
   }, [now, turnDeadline, game, winData, autoPlay])
 
   // emotes expire
@@ -245,7 +245,47 @@ export default function GameScreen() {
             <EmoteBar onEmote={sendEmote} onOpenChat={() => setChatOpen(!chatOpen)} unread={unread} />
           </div>
 
-          {/* turn hint */}
+          {/* turn countdown + hint */}
+          {youTurn && remainingSec !== null && game.phase !== 'gameover' && (
+            <motion.div
+              key={turnDeadline ?? 0}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-1 flex w-full max-w-[320px] flex-col items-center gap-1"
+            >
+              <div className="flex items-center gap-1.5">
+                <Timer size={13} style={{ color: remainingSec <= 3 ? '#fb7185' : '#ffd23e' }} />
+                <span
+                  className="ls-font text-sm leading-none"
+                  style={{ color: remainingSec <= 3 ? '#fb7185' : '#ffe9b0' }}
+                >
+                  {remainingSec}s TO PLAY
+                </span>
+                {remainingSec <= 3 && (
+                  <motion.span
+                    animate={{ opacity: [1, 0.35, 1], scale: [1, 1.12, 1] }}
+                    transition={{ repeat: Infinity, duration: 0.7 }}
+                    className="ls-font rounded-full px-2 py-0.5 text-[10px] leading-none text-white"
+                    style={{ background: 'linear-gradient(180deg,#f4695f,#b02820)' }}
+                  >
+                    AUTO
+                  </motion.span>
+                )}
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                <motion.div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${Math.max(0, Math.min(1, (turnDeadline ? (turnDeadline - now) / (TURN_SECONDS * 1000) : 0)) * 100)}%`,
+                    background: remainingSec <= 3
+                      ? 'linear-gradient(90deg,#f4695f,#b02820)'
+                      : 'linear-gradient(90deg,#ffe08a,#f0a10c)',
+                    boxShadow: remainingSec <= 3 ? '0 0 8px rgba(244,105,95,0.7)' : '0 0 8px rgba(240,161,12,0.5)',
+                  }}
+                />
+              </div>
+            </motion.div>
+          )}
           <div className="ls-font h-6 text-center text-xs tracking-wide" style={{ color: COLOR_HEX[turnColor]?.light }}>
             {game.phase === 'gameover'
               ? 'GAME OVER'

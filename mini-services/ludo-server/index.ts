@@ -11,7 +11,7 @@ import { botChooseMove } from '../../src/lib/ludo/ai'
 import type { Color, GameMode, GameState, Move } from '../../src/lib/ludo/types'
 
 const PORT = 3003
-const TURN_SECONDS = 15
+const TURN_SECONDS = 10
 const COLORS: Color[] = ['red', 'green', 'yellow', 'blue']
 
 interface ProfileIn {
@@ -111,7 +111,7 @@ function drive(room: Room) {
 
   if (st.phase === 'roll') {
     if (cur.isBot || !cur.connected) {
-      room.turnTimer = setTimeout(() => doRoll(room), 800)
+      room.turnTimer = setTimeout(() => doRoll(room), 450)
     } else {
       // human turn with timer
       room.turnTimer = setTimeout(() => {
@@ -134,11 +134,11 @@ function drive(room: Room) {
       room.state = passTurn(room.state)
       io.to(room.code).emit('game:passed', { state: room.state, reason: 'nomove' })
       drive(room)
-    }, 900)
+    }, 550)
     return
   }
   if (cur.isBot || !cur.connected) {
-    room.turnTimer = setTimeout(() => doBotMove(room), 700)
+    room.turnTimer = setTimeout(() => doBotMove(room), 380)
   } else {
     room.turnTimer = setTimeout(() => {
       if (!room.state || room.state.phase !== 'move') return
@@ -164,7 +164,7 @@ function doRoll(room: Room) {
       room.state = passTurn(room.state)
       io.to(room.code).emit('game:passed', { state: room.state, reason: 'forfeit' })
       drive(room)
-    }, 1100)
+    }, 750)
     return
   }
   if (legalMoves(state).length === 0) {
@@ -173,7 +173,7 @@ function doRoll(room: Room) {
       room.state = passTurn(room.state)
       io.to(room.code).emit('game:passed', { state: room.state, reason: 'nomove' })
       drive(room)
-    }, 950)
+    }, 550)
     return
   }
   drive(room)

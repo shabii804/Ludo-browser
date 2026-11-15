@@ -106,6 +106,24 @@ export default function PlayerCard({
             OFF
           </span>
         )}
+        {/* numeric countdown badge */}
+        {player.isTurn && remainingSec !== null && !player.isBot && (
+          <motion.span
+            key={remainingSec}
+            initial={{ scale: 0.6, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full px-1.5 leading-tight"
+            style={{
+              background: timerPct < 0.3 ? 'linear-gradient(180deg,#f4695f,#b02820)' : 'linear-gradient(180deg,#ffe08a,#e09b1a)',
+              color: timerPct < 0.3 ? '#fff' : '#4a2c00',
+              fontSize: 9,
+              fontWeight: 900,
+              boxShadow: '0 2px 5px rgba(2,4,16,0.5)',
+            }}
+          >
+            {remainingSec}s
+          </motion.span>
+        )}
       </div>
 
       <div className="min-w-0 flex-1">
