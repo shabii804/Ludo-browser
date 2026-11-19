@@ -744,7 +744,10 @@ export const useLudo = create<LudoStore>((set, get) => {
       loopGen++
       cancelSchedule()
       const me = get().profile
-      const seatColors: Color[] = ['red', 'green', 'yellow', 'blue']
+      // 2P sits at DIAGONALLY OPPOSITE corners like Ludo Star:
+      // red = top-left vs yellow = bottom-right (never same side)
+      const seatColors: Color[] =
+        players.length === 2 ? ['red', 'yellow'] : ['red', 'green', 'yellow', 'blue']
       const config: GameConfig = {
         mode,
         players: players.map((p, i) => ({

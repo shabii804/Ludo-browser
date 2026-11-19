@@ -14,6 +14,13 @@ const PORT = 3003
 const TURN_SECONDS = 10
 const COLORS: Color[] = ['red', 'green', 'yellow', 'blue']
 
+// Diagonal seating like Ludo Star: 2P = red (top-left) vs yellow
+// (bottom-right) — opposite corners, never the same side of the board.
+function seatColor(seatCount: number, seatIndex: number): Color {
+  if (seatCount === 2) return seatIndex % 2 === 0 ? 'red' : 'yellow'
+  return COLORS[seatIndex % 4]
+}
+
 interface ProfileIn {
   id: string
   name: string
@@ -73,7 +80,7 @@ function lobbyPayload(room: Room) {
       id: p.id,
       name: p.name,
       avatar: p.avatar,
-      color: COLORS[i % 4],
+      color: seatColor(room.seats, i),
       isBot: p.isBot,
       connected: p.connected,
       isHost: p.isHost,
@@ -237,7 +244,7 @@ function startGame(room: Room) {
       socketId: null,
       name: botNames[Math.floor(Math.random() * botNames.length)],
       avatar: ['🦁', '🐼', '🦊', '🐸', '🐯', '🐵'][Math.floor(Math.random() * 6)],
-      color: COLORS[room.players.length % 4],
+      color: seatColor(room.seats, room.players.length),
       isBot: true,
       connected: true,
       isHost: false,
@@ -248,7 +255,7 @@ function startGame(room: Room) {
   room.state = createGame({
     mode: room.mode,
     players: room.players.map((p, i) => ({
-      color: COLORS[i % 4],
+      color: seatColor(room.seats, i),
       name: p.name,
       avatar: p.avatar,
       isBot: p.isBot,
@@ -256,7 +263,7 @@ function startGame(room: Room) {
   })
   room.phase = 'playing'
   room.players.forEach((p, i) => {
-    p.color = COLORS[i % 4]
+    p.color = seatColor(room.seats, i)
     p.rematch = false
     p.timeouts = 0
   })
@@ -321,7 +328,7 @@ function joinRoom(socket: Socket, room: Room, profile: ProfileIn): boolean {
     socketId: socket.id,
     name: profile.name || 'Player',
     avatar: profile.avatar || '🙂',
-    color: COLORS[room.players.length % 4],
+    color: seatColor(room.seats, room.players.length),
     isBot: false,
     connected: true,
     isHost: room.players.length === 0,
@@ -474,7 +481,7 @@ io.on('connection', (socket: Socket) => {
       socketId: null,
       name: botNames[Math.floor(Math.random() * botNames.length)],
       avatar: ['🦁', '🐼', '🦊', '🐸', '🐯', '🐵'][Math.floor(Math.random() * 6)],
-      color: COLORS[room.players.length % 4],
+      color: seatColor(room.seats, room.players.length),
       isBot: true,
       connected: true,
       isHost: false,

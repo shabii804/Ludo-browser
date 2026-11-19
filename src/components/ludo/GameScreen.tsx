@@ -113,6 +113,12 @@ export default function GameScreen() {
   }
 
   const turnName = game.players[game.turn].name
+  // 2P: opponent card ABOVE the board, your card BELOW it — opposite
+  // sides like Ludo Star (matches the diagonal corner seating)
+  const isTwoP = game.players.length === 2
+  const youIdx = game.players.findIndex((p) => p.color === session.youColor)
+  const twoPOk = isTwoP && youIdx >= 0
+  const oppIdx = twoPOk ? 1 - youIdx : -1
   // dice shows TAP state when you can roll, otherwise last rolled value(s)
   const displayDice = canRoll && game.phase === 'roll' ? [] : diceValues.length > 0 ? diceValues : game.dice
 
@@ -184,12 +190,24 @@ export default function GameScreen() {
 
         {/* main layout: phone-format column — player grid above board */}
         <div className="flex flex-1 flex-col items-center justify-center gap-2">
-          {/* player cards — every seat, 2-column grid */}
-          <div className="grid w-full grid-cols-2 gap-1.5">
-            {game.players.map((p, i) => (
-              <PlayerCard key={p.color} player={cardData(i)!} compact remainingSec={game.turn === i ? remainingSec : null} emote={emoteFor(p.color)} />
-            ))}
-          </div>
+          {/* player cards — 2P: opponent on top (opposite side of board);
+              3P/4P: all seats in a 2-column grid */}
+          {twoPOk ? (
+            <div className="w-full">
+              <PlayerCard
+                player={cardData(oppIdx)!}
+                compact
+                remainingSec={game.turn === oppIdx ? remainingSec : null}
+                emote={emoteFor(game.players[oppIdx].color)}
+              />
+            </div>
+          ) : (
+            <div className="grid w-full grid-cols-2 gap-1.5">
+              {game.players.map((p, i) => (
+                <PlayerCard key={p.color} player={cardData(i)!} compact remainingSec={game.turn === i ? remainingSec : null} emote={emoteFor(p.color)} />
+              ))}
+            </div>
+          )}
 
           {/* board — self-capped by vh, always fits the column */}
           <div className="w-full">
@@ -208,6 +226,18 @@ export default function GameScreen() {
               onSelectDie={selectDie}
             />
           </div>
+
+          {/* your card — bottom side (2P only) */}
+          {twoPOk && (
+            <div className="w-full">
+              <PlayerCard
+                player={cardData(youIdx)!}
+                compact
+                remainingSec={game.turn === youIdx ? remainingSec : null}
+                emote={emoteFor(session.youColor)}
+              />
+            </div>
+          )}
 
           {/* emotes + hints */}
           <div className="mt-1 flex items-center gap-3">

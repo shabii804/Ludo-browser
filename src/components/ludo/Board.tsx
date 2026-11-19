@@ -144,6 +144,8 @@ export default function Board({
             const base = YARD_BASE[color]
             const c = COLOR_HEX[color]
             const isTurn = turnColor === color && game.phase !== 'gameover'
+            // seats not used in this game (e.g. green/blue in 2P) render dimmed gray
+            const active = game.players.some((p) => p.color === color)
             return (
               <div
                 key={`yard-${color}`}
@@ -155,6 +157,7 @@ export default function Board({
                   height: pct(6),
                   background: `linear-gradient(150deg, ${c.light} -30%, ${c.main} 45%, ${c.dark} 125%)`,
                   borderRadius: '9%',
+                  filter: active ? undefined : 'grayscale(0.92) brightness(0.72) opacity(0.5)',
                   boxShadow: isTurn
                     ? `inset 0 0 0 3px rgba(255,255,255,0.95), 0 0 26px 6px ${c.glow}`
                     : 'inset 0 -6px 12px rgba(0,0,0,0.28), inset 0 2px 0 rgba(255,255,255,0.35)',
