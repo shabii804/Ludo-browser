@@ -3,9 +3,11 @@
 // ============================================================
 // Ludo Board — clean, Ludo Star style:
 // each ACTIVE yard carries the player's profile avatar with a
-// turn-timer ring; the dice renders in the turn player's yard
-// corner; tokens glide smoothly cell-to-cell; unused yards are
-// dimmed gray. Center is pure finish triangles (no clutter).
+// turn-timer ring; EVERY active corner holds a dice plate (only
+// the turn player's plate is interactive, the rest are dimmed);
+// tokens are clear ROUND discs; ONLY the turn player's movable
+// tokens glow (bots' movable tokens glow too, so you can always
+// read whose turn it is); unused yards are dimmed gray.
 // Geometry & interaction logic preserved.
 // ============================================================
 
@@ -24,6 +26,7 @@ import {
   YARD_SLOTS,
   tokenScreenPos,
 } from '@/lib/ludo/board'
+import { legalMoves } from '@/lib/ludo/engine'
 import { DiceSlot } from '@/components/ludo/Dice'
 import { TURN_SECONDS } from '@/lib/ludo/constants'
 
@@ -31,8 +34,14 @@ interface BoardProps {
   game: GameState
   movableTokenIds: number[]
   onTokenClick: (tokenId: number) => void
-  /** color controlled by the local human (for token click enable) */
+  /** color controlled by the local human (for the YOU badge) */
   youColor: Color | null
+  /**
+   * color allowed to TAP tokens on this device right now:
+   * local games = the turn player when they are human (pass-n-play),
+   * online = your color only when it is your turn.
+   */
+  interactiveColor: Color | null
   animating: boolean
   emotes: Array<{ id: number; color: Color; emoji: string }>
   diceValues: number[]
@@ -71,6 +80,7 @@ export default function Board({
   movableTokenIds,
   onTokenClick,
   youColor,
+  interactiveColor,
   animating,
   emotes,
   diceValues,
@@ -82,8 +92,27 @@ export default function Board({
   turnRemainingSec,
 }: BoardProps) {
   const turnColor = game.players[game.turn]?.color
-  const humanCanAct = !animating && movableTokenIds.length > 0
   const turnPlayer = game.players[game.turn]
+
+  /**
+   * Which token ids GLOW. Only the TURN player's movable tokens ever
+   * glow — for the local human this comes from the store (respects the
+   * selected die); for bots & remote humans we derive it from the engine
+   * so the active player is always readable.
+   */
+  const isLocalHumanTurn = !!interactiveColor && turnColor === interactiveColor && !!turnPlayer && !turnPlayer.isBot
+  const glowTokenIds = useMemo(() => {
+    if (animating || !turnPlayer || game.phase !== 'move') return []
+    if (isLocalHumanTurn && movableTokenIds.length > 0) return movableTokenIds
+    return [...new Set(legalMoves(game).map((m) => m.tokenId))]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [animating, game, turnPlayer, isLocalHumanTurn, movableTokenIds])
+
+  const glow = (color: Color, tokenId: number) =>
+    !animating && game.phase === 'move' && color === turnColor && glowTokenIds.includes(tokenId)
+
+  const clickable = (color: Color, tokenId: number) =>
+    glow(color, tokenId) && interactiveColor === color
 
   // track + home cells
   const cells = useMemo(() => {
@@ -262,7 +291,8 @@ export default function Board({
                           {inYard && token && (
                             <Pawn
                               color={color}
-                              movable={humanCanAct && youColor === color && movableTokenIds.includes(token.id)}
+                              glow={glow(color, token.id)}
+                              tap={clickable(color, token.id)}
                               onClick={() => onTokenClick(token.id)}
                               tokenId={token.id}
                               uid={`y${color}${token.id}`}
@@ -346,7 +376,7 @@ export default function Board({
               ?.tokens.filter((t) => t.location === 'finished')
               .map((t) => {
                 const slot = FINISH_SLOTS[color][t.id % 4]
-                const w = 0.78
+                const w = 0.72
                 return (
                   <div
                     key={`fin-${color}-${t.id}`}
@@ -355,11 +385,11 @@ export default function Board({
                       left: `calc(${(slot.c / BOARD_SIZE) * 100}% - ${(w / 2 / BOARD_SIZE) * 100}%)`,
                       top: `calc(${(slot.r / BOARD_SIZE) * 100}% - ${(w / 2 / BOARD_SIZE) * 100}%)`,
                       width: pct(w),
-                      height: pct(w * 1.25),
+                      height: pct(w),
                       pointerEvents: 'none',
                     }}
                   >
-                    <Pawn color={color} movable={false} onClick={() => undefined} tokenId={t.id} uid={`f${color}${t.id}`} />
+                    <Pawn color={color} glow={false} tap={false} onClick={() => undefined} tokenId={t.id} uid={`f${color}${t.id}`} />
                   </div>
                 )
               })
@@ -373,7 +403,8 @@ export default function Board({
                 const stack = t.location === 'track' ? (tokensByCell.get(`trk${t.trackIdx}`) ?? []) : []
                 const stackIndex = stack.findIndex((x) => x.color === p.color && x.id === t.id)
                 const pos = tokenScreenPos(p.color, t.id, t.location, t.trackIdx, t.homeStep, stackIndex, stack.length)
-                const w = 1.0
+                const w = 0.96
+                const isGlowing = glow(p.color, t.id)
                 return (
                   <div
                     key={`m-${p.color}-${t.id}`}
@@ -382,13 +413,15 @@ export default function Board({
                       left: `calc(${pos.x}% - ${(w / 2 / BOARD_SIZE) * 100}%)`,
                       top: `calc(${pos.y}% - ${(w / 2 / BOARD_SIZE) * 100}%)`,
                       width: pct(w),
-                      height: pct(w * 1.25),
-                      transition: 'left 260ms cubic-bezier(0.4, 0, 0.2, 1), top 260ms cubic-bezier(0.4, 0, 0.2, 1)',
+                      height: pct(w),
+                      zIndex: isGlowing ? 25 : 15,
+                      transition: 'left 300ms cubic-bezier(0.4, 0, 0.2, 1), top 300ms cubic-bezier(0.4, 0, 0.2, 1)',
                     }}
                   >
                     <Pawn
                       color={p.color}
-                      movable={humanCanAct && youColor === p.color && movableTokenIds.includes(t.id)}
+                      glow={isGlowing}
+                      tap={clickable(p.color, t.id)}
                       onClick={() => onTokenClick(t.id)}
                       tokenId={t.id}
                       uid={`t${p.color}${t.id}`}
@@ -398,20 +431,24 @@ export default function Board({
               })
           )}
 
-          {/* dice in the TURN player's yard corner */}
-          {turnPlayer && game.phase !== 'gameover' && (
-            <DiceSlot
-              color={turnPlayer.color}
-              values={diceValues}
-              rolling={diceRolling}
-              canRoll={canRoll}
-              isYou={!!youColor && turnColor === youColor}
-              usedDice={game.usedDice}
-              selectedDie={selectedDie ?? 0}
-              onSelectDie={onSelectDie}
-              onRoll={onRoll}
-            />
-          )}
+          {/* a dice plate in EVERY active player's corner — Ludo Star style.
+              Only the turn player's plate is live; the others sit dimmed. */}
+          {game.phase !== 'gameover' &&
+            game.players.map((p) => (
+              <DiceSlot
+                key={`dice-${p.color}`}
+                color={p.color}
+                dimmed={p.color !== turnColor}
+                values={p.color === turnColor ? diceValues : []}
+                rolling={diceRolling && p.color === turnColor}
+                canRoll={canRoll && p.color === turnColor}
+                isYou={!!youColor && p.color === youColor}
+                usedDice={p.color === turnColor ? game.usedDice : []}
+                selectedDie={selectedDie ?? 0}
+                onSelectDie={onSelectDie}
+                onRoll={onRoll}
+              />
+            ))}
 
           {/* emote bubbles floating over yards */}
           <AnimatePresence>
@@ -438,66 +475,53 @@ export default function Board({
   )
 }
 
-// ---------------- Pawn (premium 3D token) ----------------
+// ---------------- Pawn (premium round token) ----------------
 
 function Pawn({
   color,
-  movable,
+  glow,
+  tap,
   onClick,
   tokenId,
   uid,
 }: {
   color: Color
-  movable: boolean
+  /** glowing ring = this token may move now (turn player only) */
+  glow: boolean
+  /** tappable on this device (implies glow) */
+  tap: boolean
   onClick: () => void
   tokenId: number
   uid: string
 }) {
   const c = COLOR_HEX[color]
-  const skirtId = `sk-${uid}`
-  const headId = `hd-${uid}`
+  const bodyId = `bd-${uid}`
 
   const svg = (
-    <svg viewBox="0 0 64 80" className="h-full w-full overflow-visible">
+    <svg viewBox="0 0 64 64" className="h-full w-full overflow-visible">
       <defs>
-        <linearGradient id={skirtId} x1="0" y1="0" x2="1" y2="0">
+        <radialGradient id={bodyId} cx="0.34" cy="0.28" r="1">
           <stop offset="0" stopColor={c.light} />
-          <stop offset="0.45" stopColor={c.main} />
-          <stop offset="1" stopColor={c.dark} />
-        </linearGradient>
-        <radialGradient id={headId} cx="0.35" cy="0.28" r="1">
-          <stop offset="0" stopColor={c.light} />
-          <stop offset="0.55" stopColor={c.main} />
+          <stop offset="0.52" stopColor={c.main} />
           <stop offset="1" stopColor={c.dark} />
         </radialGradient>
       </defs>
       {/* ground shadow */}
-      <ellipse cx="32" cy="74" rx="17" ry="4.5" fill="rgba(20,24,60,0.35)" />
-      {/* base */}
-      <ellipse cx="32" cy="69.5" rx="17.5" ry="6.5" fill={c.dark} />
-      {/* skirt */}
-      <path
-        d="M32 36 C 23 43 18.5 57 18 68.5 Q 32 76.5 46 68.5 C 45.5 57 41 43 32 36 Z"
-        fill={`url(#${skirtId})`}
-        stroke={c.dark}
-        strokeWidth="1.4"
-        strokeLinejoin="round"
-      />
-      {/* collar */}
-      <ellipse cx="32" cy="37.5" rx="10.2" ry="4.8" fill={c.light} stroke={c.dark} strokeWidth="1.4" />
-      {/* head */}
-      <circle cx="32" cy="24" r="12.5" fill={`url(#${headId})`} stroke={c.dark} strokeWidth="1.4" />
-      {/* crisp white outline so tokens read clearly on any cell */}
-      <circle cx="32" cy="24" r="12.5" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="2.2" />
-      <path d="M19.2 60 C 21 66 26 70.4 32 70.6 C 38 70.4 43 66 44.8 60" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" />
+      <ellipse cx="32" cy="56" rx="19" ry="5" fill="rgba(10,14,40,0.38)" />
+      {/* dark rim */}
+      <circle cx="32" cy="32" r="23.5" fill={c.dark} />
+      {/* round body with crisp white ring — reads clearly on any cell */}
+      <circle cx="32" cy="31" r="21" fill={`url(#${bodyId})`} stroke="rgba(255,255,255,0.95)" strokeWidth="3.2" />
+      {/* inner ring detail */}
+      <circle cx="32" cy="31" r="12.5" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2.4" />
       {/* gloss */}
-      <ellipse cx="27.5" cy="19.5" rx="4.8" ry="3.2" fill="rgba(255,255,255,0.92)" transform="rotate(-18 27.5 19.5)" />
-      {/* rim light */}
-      <path d="M44 40 C 45 50 45.8 60 46 68" stroke="rgba(255,255,255,0.35)" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+      <ellipse cx="24.5" cy="21.5" rx="6.6" ry="4.4" fill="rgba(255,255,255,0.9)" transform="rotate(-22 24.5 21.5)" />
+      {/* bottom rim light */}
+      <path d="M14 40 A 21 21 0 0 0 50 40" fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth="2" strokeLinecap="round" />
     </svg>
   )
 
-  if (movable) {
+  if (tap) {
     return (
       <motion.button
         data-token={`${color}-${tokenId}`}
@@ -511,7 +535,7 @@ function Pawn({
         {svg}
         <motion.span
           className="absolute inset-[-12%] rounded-full"
-          style={{ border: `2.5px dashed #ffd977` }}
+          style={{ border: '2.5px dashed #ffd977' }}
           animate={{ rotate: 360 }}
           transition={{ repeat: Infinity, duration: 3.2, ease: 'linear' }}
         />
@@ -520,6 +544,25 @@ function Pawn({
           style={{ boxShadow: `0 0 16px 3px ${c.glow}` }}
         />
       </motion.button>
+    )
+  }
+
+  if (glow) {
+    // bot / remote-human display glow — no pointer, but clearly highlighted
+    return (
+      <div className="absolute inset-0 z-10" aria-hidden>
+        {svg}
+        <motion.span
+          className="absolute inset-[-12%] rounded-full"
+          style={{ border: '2.5px dashed rgba(255,217,119,0.85)' }}
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 3.2, ease: 'linear' }}
+        />
+        <span
+          className="absolute inset-[-12%] rounded-full"
+          style={{ boxShadow: `0 0 14px 2px ${c.glow}` }}
+        />
+      </div>
     )
   }
 

@@ -17,6 +17,7 @@ import WinOverlay from '@/components/ludo/WinOverlay'
 import { useLudo } from '@/stores/ludoStore'
 import { COLOR_HEX } from '@/lib/ludo/board'
 import { TURN_SECONDS } from '@/lib/ludo/constants'
+import type { Color } from '@/lib/ludo/types'
 
 export default function GameScreen() {
   const game = useLudo((s) => s.game)
@@ -80,15 +81,28 @@ export default function GameScreen() {
     return () => clearInterval(t)
   }, [])
 
-  const visibleEmotes = useMemo(() => emotes.filter((e) => Date.now() - e.id < 9000000), [emotes, nowEmote])
+  const visibleEmotes = useMemo(
+    () => emotes.filter((e) => Date.now() - e.ts < 4200),
+    [emotes, nowEmote]
+  )
 
   if (!game || !session) return null
 
   const turnColor = game.players[game.turn].color
-  const youTurn = !game.players[game.turn].isBot && turnColor === session.youColor
-  const remainingSec = turnDeadline ? Math.max(0, Math.ceil((turnDeadline - now) / 1000)) : null
+  const turnPlayer = game.players[game.turn]
+  const youTurn = !turnPlayer.isBot && turnColor === session.youColor
+  const remainingSec = turnDeadline ? Math.min(TURN_SECONDS, Math.max(0, Math.ceil((turnDeadline - now) / 1000))) : null
 
-  const turnName = game.players[game.turn].name
+  /** who may tap tokens on this device: pass-n-play hands control to each human seat in turn */
+  const interactiveColor: Color | null = session.online
+    ? youTurn
+      ? session.youColor
+      : null
+    : !turnPlayer.isBot
+      ? turnColor
+      : null
+
+  const turnName = turnPlayer.name
   // dice shows TAP state when you can roll, otherwise last rolled value(s)
   const displayDice = canRoll && game.phase === 'roll' ? [] : diceValues.length > 0 ? diceValues : game.dice
 
@@ -150,6 +164,7 @@ export default function GameScreen() {
             movableTokenIds={movableTokenIds}
             onTokenClick={(id) => void clickToken(id)}
             youColor={session.youColor}
+            interactiveColor={interactiveColor}
             animating={animating}
             emotes={visibleEmotes.map((e) => ({ id: e.id, color: e.color, emoji: e.emoji }))}
             diceValues={displayDice}
@@ -170,13 +185,15 @@ export default function GameScreen() {
               ? 'GAME OVER'
               : diceRolling
                 ? 'ROLLING...'
-                : youTurn
-                  ? game.phase === 'roll'
-                    ? 'YOUR TURN — TAP THE DICE'
-                    : movableTokenIds.length > 0
-                      ? 'TAP A GLOWING TOKEN TO MOVE'
-                      : '...'
-                  : `${turnName.toUpperCase()}'S TURN${game.players[game.turn].isBot ? ' (BOT)' : ''}`}
+                : canRoll && game.phase === 'roll' && game.sixStreak > 0
+                  ? 'SIX! ROLL AGAIN'
+                  : interactiveColor
+                    ? game.phase === 'roll'
+                      ? 'YOUR TURN — TAP THE DICE'
+                      : movableTokenIds.length > 0
+                        ? 'TAP A GLOWING TOKEN TO MOVE'
+                        : '...'
+                    : `${turnName.toUpperCase()}'S TURN${turnPlayer.isBot ? ' (BOT)' : ''}`}
           </div>
           {game.mode === 'master' && game.dice.length > 1 && (
             <div className="text-center text-[10px] text-indigo-300/50">Master: use both dice · tap a die to switch</div>

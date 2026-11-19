@@ -85,11 +85,14 @@ export interface DiceSlotProps {
   onRoll?: () => void
   /** plate size in board cells (default 1.9) */
   size?: number
+  /** idle plate for a player whose turn it is NOT (dimmed, never interactive) */
+  dimmed?: boolean
 }
 
 /**
- * Dice holder rendered at the active player's yard corner.
- * Idle state (not this player's turn) renders nothing.
+ * Dice holder rendered at each active player's yard corner.
+ * The TURN player's plate is live (tap to roll); other players get a
+ * small dimmed plate (dimmed=true) so every corner has dice.
  */
 export function DiceSlot({
   color,
@@ -102,12 +105,35 @@ export function DiceSlot({
   onSelectDie,
   onRoll,
   size = 1.9,
+  dimmed = false,
 }: DiceSlotProps) {
   const c = COLOR_HEX[color]
   const anchor = DICE_ANCHOR[color]
-  const showTap = canRoll && values.length === 0 && !rolling
-  const twoDice = values.length > 1
+  const showTap = !dimmed && canRoll && values.length === 0 && !rolling
+  const twoDice = !dimmed && values.length > 1
   const pctUnit = (v: number) => `${(v / 15) * 100}%`
+
+  if (dimmed) {
+    // small quiet plate that keeps the corner occupied without competing for attention
+    return (
+      <div
+        className="absolute z-20"
+        style={{ left: pctUnit(anchor.c + 0.28), top: pctUnit(anchor.r + 0.28), width: pctUnit(1.34), height: pctUnit(1.34), opacity: 0.42 }}
+        aria-hidden
+      >
+        <div
+          className="absolute inset-0 rounded-[22%]"
+          style={{
+            background: 'linear-gradient(160deg, rgba(255,255,255,0.14), rgba(10,14,40,0.26))',
+            border: `1.5px solid ${c.dark}`,
+          }}
+        />
+        <div className="absolute inset-[14%]">
+          <DieFace value={6} used />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div

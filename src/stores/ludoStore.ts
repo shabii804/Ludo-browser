@@ -26,6 +26,16 @@ export interface Profile {
   gems: number
   wins: number
   losses: number
+  /** recent finished games, oldest first (for the profile timeline graph) */
+  history: GameHistoryEntry[]
+}
+
+export interface GameHistoryEntry {
+  /** wall-clock timestamp (ms) when the game ended */
+  t: number
+  won: boolean
+  /** coin balance change caused by this game */
+  delta: number
 }
 
 export interface Session {
@@ -47,6 +57,8 @@ export interface EmoteMsg {
   id: number
   color: Color
   emoji: string
+  /** wall-clock ms when sent — bubbles stay visible a few seconds */
+  ts: number
 }
 
 export interface ChatMsg {
@@ -178,6 +190,7 @@ const DEFAULT_PROFILE: Profile = {
   gems: 20,
   wins: 0,
   losses: 0,
+  history: [],
 }
 
 function loadProfile(): Profile {
@@ -186,7 +199,12 @@ function loadProfile(): Profile {
     const raw = localStorage.getItem('ludo.profile.v1')
     if (raw) {
       const p = JSON.parse(raw) as Partial<Profile>
-      return { ...DEFAULT_PROFILE, ...p, gems: typeof p.gems === 'number' ? p.gems : 20 }
+      return {
+        ...DEFAULT_PROFILE,
+        ...p,
+        gems: typeof p.gems === 'number' ? p.gems : 20,
+        history: Array.isArray(p.history) ? p.history : [],
+      }
     }
   } catch {
     /* ignore */
@@ -196,7 +214,13 @@ function loadProfile(): Profile {
     id: uid(),
     name: 'Player' + Math.floor(100 + Math.random() * 900),
     avatar: AVATARS[Math.floor(Math.random() * AVATARS.length)],
+    history: [],
   }
+}
+
+/** Append a finished game to the profile history (kept last 30). */
+function recordHistory(profile: Profile, won: boolean, delta: number): Profile {
+  return { ...profile, history: [...profile.history, { t: Date.now(), won, delta }].slice(-30) }
 }
 
 function loadDaily(): DailyState | null {
@@ -310,15 +334,15 @@ export const useLudo = create<LudoStore>((set, get) => {
     const youWon = result.winner === session.youColor
     const pot = session.pot
     const coinDelta = youWon ? pot : 0
+    // net coin change of the whole game (stake paid at start, pot collected on win)
+    const netDelta = youWon ? pot - session.stake : -session.stake
     if (youWon) {
       get().addCoins(pot)
       sfx.win()
-      set((s) => ({ profile: { ...s.profile, wins: s.profile.wins + 1, gems: s.profile.gems + 2 } }))
-      setTimeout(() => get().updateProfile({}), 0)
+      set((s) => ({ profile: recordHistory({ ...s.profile, wins: s.profile.wins + 1, gems: s.profile.gems + 2 }, true, netDelta) }))
     } else {
       sfx.lose()
-      set((s) => ({ profile: { ...s.profile, losses: s.profile.losses + 1 } }))
-      setTimeout(() => get().updateProfile({}), 0)
+      set((s) => ({ profile: recordHistory({ ...s.profile, losses: s.profile.losses + 1 }, false, netDelta) }))
     }
     cancelSchedule()
     set({
@@ -341,6 +365,7 @@ export const useLudo = create<LudoStore>((set, get) => {
 
     if (g.phase === 'roll') {
       if (cur.isBot) {
+        set({ canRoll: false, turnDeadline: null })
         schedule(400, () => void botRoll(gen))
       } else {
         set({ canRoll: true, movableTokenIds: [], selectedDie: 0, turnDeadline: null })
@@ -360,6 +385,7 @@ export const useLudo = create<LudoStore>((set, get) => {
         return
       }
       if (cur.isBot) {
+        set({ canRoll: false, turnDeadline: null })
         schedule(280, () => void botMove(gen))
         return
       }
@@ -567,13 +593,14 @@ export const useLudo = create<LudoStore>((set, get) => {
       const session = get().session
       if (!session) return
       const youWon = winner === session.youColor
+      const netDelta = youWon ? pot - session.stake : -session.stake
       if (youWon) {
         get().addCoins(pot)
         sfx.win()
-        set((s) => ({ profile: { ...s.profile, wins: s.profile.wins + 1, gems: s.profile.gems + 2 } }))
+        set((s) => ({ profile: recordHistory({ ...s.profile, wins: s.profile.wins + 1, gems: s.profile.gems + 2 }, true, netDelta) }))
       } else {
         sfx.lose()
-        set((s) => ({ profile: { ...s.profile, losses: s.profile.losses + 1 } }))
+        set((s) => ({ profile: recordHistory({ ...s.profile, losses: s.profile.losses + 1 }, false, netDelta) }))
       }
       saveProfile(get().profile)
       set({
@@ -589,7 +616,7 @@ export const useLudo = create<LudoStore>((set, get) => {
     })
     online.on('game:emote', ({ color, emoji }: { color: Color; emoji: string }) => {
       sfx.emote()
-      set((s) => ({ emotes: [...s.emotes, { id: msgId++, color, emoji }].slice(-6) }))
+      set((s) => ({ emotes: [...s.emotes, { id: msgId++, color, emoji, ts: Date.now() }].slice(-6) }))
     })
     online.on('game:rematch', ({ votes }: { votes: string[] }) => {
       set({ rematchVotes: votes })
@@ -899,7 +926,7 @@ export const useLudo = create<LudoStore>((set, get) => {
       const s = get()
       const color = s.session?.youColor ?? (s.game ? s.game.players[s.game.turn].color : 'red')
       sfx.emote()
-      set((st) => ({ emotes: [...st.emotes, { id: msgId++, color, emoji }].slice(-6) }))
+      set((st) => ({ emotes: [...st.emotes, { id: msgId++, color, emoji, ts: Date.now() }].slice(-6) }))
       if (s.session?.online) online.emit('game:emote', { emoji })
     },
 
