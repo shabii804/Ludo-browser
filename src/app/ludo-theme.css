@@ -266,12 +266,12 @@ body {
   text-shadow: 0 1.5px 0 rgba(2, 4, 16, 0.7);
 }
 
-/* ---------- felt table (game screen) ---------- */
+/* ---------- felt table (game screen) — Ludo Star blue table ---------- */
 
 .ls-felt {
   background:
-    radial-gradient(120% 90% at 50% 30%, rgba(124, 58, 237, 0.14) 0%, transparent 55%),
-    radial-gradient(130% 110% at 50% 42%, #1c2246 0%, #131735 45%, #0b0e26 78%, #060818 100%);
+    radial-gradient(120% 90% at 50% 28%, rgba(59, 130, 246, 0.16) 0%, transparent 55%),
+    radial-gradient(130% 110% at 50% 42%, #14295c 0%, #0e1d45 45%, #081230 78%, #050a1e 100%);
 }
 
 /* ---------- scrollbar ---------- */

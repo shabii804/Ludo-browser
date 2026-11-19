@@ -850,7 +850,7 @@ export default function MenuScreen() {
                       <div>
                         <h3 className="ls-font text-lg leading-tight text-white">{sheet === 'table2' ? '2 PLAYER' : '4 PLAYER'}</h3>
                         <p className="text-[10px] text-fuchsia-100/60">
-                          {sheet === 'table2' ? 'Head-to-head table · invite a friend or add a bot' : 'Quick match · seats filled with live players or bots'}
+                          {sheet === 'table2' ? '1 v 1 online table' : '4 seats · live players & bots'}
                         </p>
                       </div>
                     </div>
@@ -943,7 +943,7 @@ export default function MenuScreen() {
                       <div className="h-11 w-11"><ArtPrivate /></div>
                       <div>
                         <h3 className="ls-font text-lg leading-tight text-white">PRIVATE TABLE</h3>
-                        <p className="text-[10px] text-fuchsia-100/60">Create a room, share the code, play together</p>
+                        <p className="text-[10px] text-fuchsia-100/60">Room code with friends</p>
                       </div>
                     </div>
 
@@ -1021,7 +1021,7 @@ export default function MenuScreen() {
                       <div className="h-11 w-11"><ArtOffline /></div>
                       <div>
                         <h3 className="ls-font text-lg leading-tight text-white">OFFLINE</h3>
-                        <p className="text-[10px] text-fuchsia-100/60">Bots or same-device friends · free, no coins needed</p>
+                        <p className="text-[10px] text-fuchsia-100/60">Play instantly · free</p>
                       </div>
                     </div>
 
@@ -1077,7 +1077,6 @@ export default function MenuScreen() {
                         </button>
                       </div>
                     </div>
-                    <p className="mt-2.5 text-center text-[10px] text-fuchsia-100/50">Offline games are free — stakes apply to online tables only.</p>
                   </div>
                 )}
 

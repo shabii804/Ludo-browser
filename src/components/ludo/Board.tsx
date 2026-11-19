@@ -1,10 +1,12 @@
 'use client'
 
 // ============================================================
-// Ludo Board — premium navy/gold framed board:
-// colored yards with glossy slot panels, crisp track cells,
-// 3D pawn tokens, star safe cells, dice in the center.
-// Geometry & interaction logic unchanged.
+// Ludo Board — clean, Ludo Star style:
+// each ACTIVE yard carries the player's profile avatar with a
+// turn-timer ring; the dice renders in the turn player's yard
+// corner; tokens glide smoothly cell-to-cell; unused yards are
+// dimmed gray. Center is pure finish triangles (no clutter).
+// Geometry & interaction logic preserved.
 // ============================================================
 
 import { useMemo } from 'react'
@@ -22,7 +24,8 @@ import {
   YARD_SLOTS,
   tokenScreenPos,
 } from '@/lib/ludo/board'
-import DiceCenter from '@/components/ludo/Dice'
+import { DiceSlot } from '@/components/ludo/Dice'
+import { TURN_SECONDS } from '@/lib/ludo/constants'
 
 interface BoardProps {
   game: GameState
@@ -38,6 +41,8 @@ interface BoardProps {
   onRoll?: () => void
   selectedDie?: number
   onSelectDie?: (i: number) => void
+  /** seconds left in the current turn (drives the avatar timer ring) */
+  turnRemainingSec?: number | null
 }
 
 const pct = (v: number) => `${(v / BOARD_SIZE) * 100}%`
@@ -74,6 +79,7 @@ export default function Board({
   onRoll,
   selectedDie,
   onSelectDie,
+  turnRemainingSec,
 }: BoardProps) {
   const turnColor = game.players[game.turn]?.color
   const humanCanAct = !animating && movableTokenIds.length > 0
@@ -119,13 +125,13 @@ export default function Board({
 
   return (
     <div className="relative w-full aspect-square select-none" style={{ maxWidth: 'min(92vw, 58vh)', margin: '0 auto' }}>
-      {/* deep navy frame with purple glow */}
+      {/* deep blue frame with gold trim (Ludo Star table feel) */}
       <div
         className="absolute inset-0 rounded-[6%]"
         style={{
-          background: 'linear-gradient(155deg, #33386e 0%, #1d2148 45%, #10122e 100%)',
+          background: 'linear-gradient(155deg, #1c3f7a 0%, #122a56 45%, #0a1734 100%)',
           boxShadow:
-            '0 24px 55px rgba(2,4,16,0.7), 0 0 40px rgba(124,58,237,0.22), inset 0 2px 0 rgba(196,181,253,0.35), inset 0 -4px 10px rgba(0,0,0,0.4)',
+            '0 24px 55px rgba(2,6,18,0.7), 0 0 40px rgba(59,130,246,0.18), inset 0 2px 0 rgba(147,197,253,0.30), inset 0 -4px 10px rgba(0,0,0,0.4)',
         }}
       />
       {/* gold trim ring */}
@@ -145,7 +151,8 @@ export default function Board({
             const c = COLOR_HEX[color]
             const isTurn = turnColor === color && game.phase !== 'gameover'
             // seats not used in this game (e.g. green/blue in 2P) render dimmed gray
-            const active = game.players.some((p) => p.color === color)
+            const player = game.players.find((p) => p.color === color)
+            const active = !!player
             return (
               <div
                 key={`yard-${color}`}
@@ -172,13 +179,79 @@ export default function Board({
                     boxShadow: 'inset 0 2px 8px rgba(30,35,80,0.22), 0 1px 0 rgba(255,255,255,0.4)',
                   }}
                 >
-                  <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 place-items-center p-[7%]">
+                  {/* profile avatar with turn-timer ring (active seats) */}
+                  {player && (
+                    <div className="absolute inset-x-0 top-[2%] z-10 flex justify-center">
+                      <div className="relative" style={{ width: '44%' }}>
+                        <div
+                          className="relative grid aspect-square w-full place-items-center rounded-full"
+                          style={{
+                            background: `radial-gradient(circle at 32% 28%, ${c.light}, ${c.main} 62%, ${c.dark})`,
+                            border: `2.5px solid ${isTurn ? '#ffffff' : 'rgba(255,255,255,0.75)'}`,
+                            boxShadow: isTurn ? `0 0 12px 3px ${c.glow}` : '0 2px 5px rgba(2,4,16,0.4)',
+                            fontSize: 'min(4.6vw, 22px)',
+                            lineHeight: 1,
+                          }}
+                        >
+                          <span className="drop-shadow">{player.avatar}</span>
+                        </div>
+                        {/* turn-timer ring (graph of the 10s budget) */}
+                        {isTurn && turnRemainingSec != null && (
+                          <>
+                            <svg className="absolute -inset-[9%]" viewBox="0 0 40 40" style={{ transform: 'rotate(-90deg)' }}>
+                              <circle cx="20" cy="20" r="17" fill="none" stroke="rgba(20,26,60,0.30)" strokeWidth="3.4" />
+                              <circle
+                                cx="20"
+                                cy="20"
+                                r="17"
+                                fill="none"
+                                stroke={turnRemainingSec <= 3 ? '#ef4444' : '#ffd23e'}
+                                strokeWidth="3.4"
+                                strokeLinecap="round"
+                                strokeDasharray={`${Math.max(0, Math.min(1, turnRemainingSec / TURN_SECONDS)) * 106.8} 106.8`}
+                              />
+                            </svg>
+                            <span
+                              className="ls-font absolute -bottom-1.5 -right-1.5 rounded-full px-1 leading-tight"
+                              style={{
+                                background: turnRemainingSec <= 3
+                                  ? 'linear-gradient(180deg,#f4695f,#b02820)'
+                                  : 'linear-gradient(180deg,#ffe08a,#e09b1a)',
+                                color: turnRemainingSec <= 3 ? '#fff' : '#4a2c00',
+                                fontSize: 9,
+                                fontWeight: 900,
+                                boxShadow: '0 2px 5px rgba(2,4,16,0.45)',
+                              }}
+                            >
+                              {turnRemainingSec}s
+                            </span>
+                          </>
+                        )}
+                        {/* you badge */}
+                        {youColor === color && (
+                          <span
+                            className="ls-font absolute -left-2 -top-1 rounded-full px-1 leading-tight text-white"
+                            style={{
+                              background: 'linear-gradient(180deg,#3b82f6,#1d4ed8)',
+                              fontSize: 8,
+                              border: '1px solid rgba(255,255,255,0.85)',
+                              boxShadow: '0 2px 4px rgba(2,4,16,0.4)',
+                            }}
+                          >
+                            YOU
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* token slots (bottom half of the panel) */}
+                  <div className="absolute inset-x-[7%] bottom-[4%] top-[54%] grid grid-cols-2 grid-rows-2 place-items-center gap-[4%] p-[4%]">
                     {YARD_SLOTS.map((slot, i) => {
-                      const token = game.players.find((p) => p.color === color)?.tokens[i]
+                      const token = player?.tokens[i]
                       const inYard = token?.location === 'yard'
                       return (
-                        <div key={i} className="relative h-[80%] w-[80%]">
-                          {/* empty slot circle */}
+                        <div key={i} className="relative h-[82%] w-[82%]">
                           <span
                             className="absolute inset-0 rounded-full"
                             style={{
@@ -200,6 +273,25 @@ export default function Board({
                     })}
                   </div>
                 </div>
+
+                {/* name pill on the colored strip */}
+                {player && (
+                  <div className="absolute inset-x-0 bottom-[0.5%] flex justify-center">
+                    <span
+                      className="ls-font max-w-[94%] truncate rounded-full px-1.5 leading-tight text-white"
+                      style={{
+                        background: 'linear-gradient(180deg, rgba(10,14,40,0.72), rgba(10,14,40,0.55))',
+                        border: '1px solid rgba(255,255,255,0.35)',
+                        fontSize: 8.5,
+                        textShadow: '0 1px 0 rgba(2,4,16,0.7)',
+                      }}
+                    >
+                      {player.name.toUpperCase()}
+                      {player.isBot ? ' · BOT' : ''}
+                      {player.connected === false ? ' · OFF' : ''}
+                    </span>
+                  </div>
+                )}
               </div>
             )
           })}
@@ -273,7 +365,7 @@ export default function Board({
               })
           )}
 
-          {/* tokens on track + home lane */}
+          {/* tokens on track + home lane — smooth glide between cells */}
           {game.players.map((p) =>
             p.tokens
               .filter((t) => t.location === 'track' || t.location === 'home')
@@ -291,6 +383,7 @@ export default function Board({
                       top: `calc(${pos.y}% - ${(w / 2 / BOARD_SIZE) * 100}%)`,
                       width: pct(w),
                       height: pct(w * 1.25),
+                      transition: 'left 260ms cubic-bezier(0.4, 0, 0.2, 1), top 260ms cubic-bezier(0.4, 0, 0.2, 1)',
                     }}
                   >
                     <Pawn
@@ -305,19 +398,20 @@ export default function Board({
               })
           )}
 
-          {/* dice lives in the center */}
-          <DiceCenter
-            values={diceValues}
-            rolling={diceRolling}
-            canRoll={canRoll}
-            color={turnColor ?? 'red'}
-            isYou={!!youColor && turnColor === youColor}
-            playerName={turnPlayer?.name ?? ''}
-            usedDice={game.usedDice}
-            selectedDie={selectedDie ?? 0}
-            onSelectDie={onSelectDie}
-            onRoll={onRoll}
-          />
+          {/* dice in the TURN player's yard corner */}
+          {turnPlayer && game.phase !== 'gameover' && (
+            <DiceSlot
+              color={turnPlayer.color}
+              values={diceValues}
+              rolling={diceRolling}
+              canRoll={canRoll}
+              isYou={!!youColor && turnColor === youColor}
+              usedDice={game.usedDice}
+              selectedDie={selectedDie ?? 0}
+              onSelectDie={onSelectDie}
+              onRoll={onRoll}
+            />
+          )}
 
           {/* emote bubbles floating over yards */}
           <AnimatePresence>
@@ -393,6 +487,9 @@ function Pawn({
       <ellipse cx="32" cy="37.5" rx="10.2" ry="4.8" fill={c.light} stroke={c.dark} strokeWidth="1.4" />
       {/* head */}
       <circle cx="32" cy="24" r="12.5" fill={`url(#${headId})`} stroke={c.dark} strokeWidth="1.4" />
+      {/* crisp white outline so tokens read clearly on any cell */}
+      <circle cx="32" cy="24" r="12.5" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="2.2" />
+      <path d="M19.2 60 C 21 66 26 70.4 32 70.6 C 38 70.4 43 66 44.8 60" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" />
       {/* gloss */}
       <ellipse cx="27.5" cy="19.5" rx="4.8" ry="3.2" fill="rgba(255,255,255,0.92)" transform="rotate(-18 27.5 19.5)" />
       {/* rim light */}
@@ -406,7 +503,7 @@ function Pawn({
         data-token={`${color}-${tokenId}`}
         onClick={onClick}
         whileTap={{ scale: 0.82 }}
-        animate={{ y: [0, -4, 0] }}
+        animate={{ y: [0, -5, 0] }}
         transition={{ repeat: Infinity, duration: 0.85, ease: 'easeInOut' }}
         className="absolute inset-0 z-20 cursor-pointer"
         aria-label={`${color} token ${tokenId} (movable)`}

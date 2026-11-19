@@ -67,18 +67,18 @@ export function EmoteBar({
       <motion.button
         whileTap={{ scale: 0.9 }}
         onClick={() => setOpen((o) => !o)}
-        className="ls-panel grid h-11 w-11 place-items-center rounded-full transition hover:brightness-125"
+        className="ls-panel grid h-10 w-10 place-items-center rounded-full transition hover:brightness-125"
         aria-label="Send emote"
       >
-        <Smile size={20} className="text-violet-300" />
+        <Smile size={19} className="text-violet-300" />
       </motion.button>
       <motion.button
         whileTap={{ scale: 0.9 }}
         onClick={onOpenChat}
-        className="ls-panel relative grid h-11 w-11 place-items-center rounded-full transition hover:brightness-125"
+        className="ls-panel relative grid h-10 w-10 place-items-center rounded-full transition hover:brightness-125"
         aria-label="Open chat"
       >
-        <MessageCircle size={19} className="text-violet-300" />
+        <MessageCircle size={18} className="text-violet-300" />
         {unread > 0 && (
           <span className="absolute -right-0.5 -top-0.5 grid h-4 w-4 place-items-center rounded-full bg-rose-500 text-[9px] font-bold text-white ring-1 ring-white/60">
             {unread}
