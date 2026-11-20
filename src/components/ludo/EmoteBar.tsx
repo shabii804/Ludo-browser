@@ -20,7 +20,7 @@ export function EmoteBar({
 }) {
   const [open, setOpen] = useState(false)
   return (
-    <div className="relative flex items-center gap-2">
+    <div className="relative flex w-full items-stretch justify-center gap-3">
       <AnimatePresence>
         {open && (
           <motion.div
@@ -65,22 +65,27 @@ export function EmoteBar({
         )}
       </AnimatePresence>
       <motion.button
-        whileTap={{ scale: 0.9 }}
+        whileTap={{ scale: 0.93 }}
         onClick={() => setOpen((o) => !o)}
-        className="ls-panel grid h-10 w-10 place-items-center rounded-full transition hover:brightness-125"
+        className="ls-bottom-btn relative flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl"
         aria-label="Send emote"
       >
-        <Smile size={19} className="text-violet-300" />
+        <Smile size={19} className="text-amber-300" />
+        <span className="ls-font text-[15px] tracking-wide text-white">EMOJI</span>
       </motion.button>
       <motion.button
-        whileTap={{ scale: 0.9 }}
+        whileTap={{ scale: 0.93 }}
         onClick={onOpenChat}
-        className="ls-panel relative grid h-10 w-10 place-items-center rounded-full transition hover:brightness-125"
+        className="ls-bottom-btn relative flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl"
         aria-label="Open chat"
       >
-        <MessageCircle size={18} className="text-violet-300" />
+        <MessageCircle size={18} className="text-violet-200" />
+        <span className="ls-font text-[15px] tracking-wide text-white">CHAT</span>
         {unread > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 grid h-4 w-4 place-items-center rounded-full bg-rose-500 text-[9px] font-bold text-white ring-1 ring-white/60">
+          <span
+            className="absolute -right-1.5 -top-1.5 grid h-5 min-w-5 place-items-center rounded-full px-1 text-[10px] font-bold text-white"
+            style={{ background: 'linear-gradient(180deg,#f4695f,#b02820)', border: '1.5px solid #fecaca', boxShadow: '0 2px 6px rgba(10,2,20,0.5)' }}
+          >
             {unread}
           </span>
         )}

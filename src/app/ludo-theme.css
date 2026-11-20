@@ -274,6 +274,53 @@ body {
     radial-gradient(130% 110% at 50% 42%, #14295c 0%, #0e1d45 45%, #081230 78%, #050a1e 100%);
 }
 
+/* ---------- palace hall (game screen) — Ludo Star purple table ---------- */
+
+.ls-palace {
+  background:
+    radial-gradient(85% 55% at 50% -8%, rgba(216, 180, 254, 0.16) 0%, transparent 60%),
+    radial-gradient(70% 50% at 88% 100%, rgba(168, 85, 247, 0.17) 0%, transparent 60%),
+    radial-gradient(60% 45% at 8% 96%, rgba(126, 34, 206, 0.19) 0%, transparent 60%),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.016) 0 14px, transparent 14px 28px),
+    linear-gradient(180deg, #4a1258 0%, #3d0e4e 42%, #2b0a3a 78%, #1d0629 100%);
+}
+
+.ls-hud-btn {
+  background: linear-gradient(180deg, #9d6bf5 0%, #7c3aed 55%, #5b21b6 100%);
+  border: 2px solid rgba(221, 202, 255, 0.75);
+  box-shadow:
+    0 4px 0 #3b1580,
+    0 8px 16px rgba(30, 8, 70, 0.45),
+    inset 0 2px 0 rgba(255, 255, 255, 0.35);
+  text-shadow: 0 1.5px 0 rgba(40, 10, 90, 0.55);
+  transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s ease;
+}
+.ls-hud-btn:hover {
+  filter: brightness(1.08);
+}
+.ls-hud-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #3b1580, 0 3px 6px rgba(0, 0, 0, 0.35);
+}
+
+.ls-bottom-btn {
+  background: linear-gradient(180deg, #9d6bf5 0%, #7c3aed 55%, #5b21b6 100%);
+  border: 2px solid rgba(221, 202, 255, 0.8);
+  box-shadow:
+    0 4px 0 #3b1580,
+    0 9px 18px rgba(30, 8, 70, 0.45),
+    inset 0 2px 0 rgba(255, 255, 255, 0.35);
+  text-shadow: 0 2px 0 rgba(40, 10, 90, 0.55);
+  transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s ease;
+}
+.ls-bottom-btn:hover {
+  filter: brightness(1.08);
+}
+.ls-bottom-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #3b1580, 0 3px 6px rgba(0, 0, 0, 0.35);
+}
+
 /* ---------- scrollbar ---------- */
 
 .ls-scroll::-webkit-scrollbar { width: 8px; height: 8px; }

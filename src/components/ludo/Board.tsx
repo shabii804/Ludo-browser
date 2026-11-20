@@ -2,12 +2,12 @@
 
 // ============================================================
 // Ludo Board — clean, Ludo Star style:
-// each ACTIVE yard carries the player's profile avatar with a
-// turn-timer ring; EVERY active corner holds a dice plate (only
-// the turn player's plate is interactive, the rest are dimmed);
-// tokens are premium 3D pawn pieces (gem cut + gold crown); ONLY the turn player's movable
-// tokens glow (bots' movable tokens glow too, so you can always
-// read whose turn it is); unused yards are dimmed gray.
+// colored glossy yards holding the 3D pawn tokens, gold frame,
+// star cells and central medallion. Player avatars, names and
+// dice live OUTSIDE the board on the table (GameScreen plates).
+// ONLY the turn player's movable tokens glow (bots' movable
+// tokens glow too, so you can always read whose turn it is);
+// unused yards are dimmed gray.
 // Geometry & interaction logic preserved.
 // ============================================================
 
@@ -27,16 +27,12 @@ import {
   tokenScreenPos,
 } from '@/lib/ludo/board'
 import { legalMoves } from '@/lib/ludo/engine'
-import { DiceSlot } from '@/components/ludo/Dice'
 import Pawn3D from '@/components/ludo/Pawn3D'
-import { TURN_SECONDS } from '@/lib/ludo/constants'
 
 interface BoardProps {
   game: GameState
   movableTokenIds: number[]
   onTokenClick: (tokenId: number) => void
-  /** color controlled by the local human (for the YOU badge) */
-  youColor: Color | null
   /**
    * color allowed to TAP tokens on this device right now:
    * local games = the turn player when they are human (pass-n-play),
@@ -45,14 +41,6 @@ interface BoardProps {
   interactiveColor: Color | null
   animating: boolean
   emotes: Array<{ id: number; color: Color; emoji: string }>
-  diceValues: number[]
-  diceRolling: boolean
-  canRoll: boolean
-  onRoll?: () => void
-  selectedDie?: number
-  onSelectDie?: (i: number) => void
-  /** seconds left in the current turn (drives the avatar timer ring) */
-  turnRemainingSec?: number | null
 }
 
 const pct = (v: number) => `${(v / BOARD_SIZE) * 100}%`
@@ -93,17 +81,9 @@ export default function Board({
   game,
   movableTokenIds,
   onTokenClick,
-  youColor,
   interactiveColor,
   animating,
   emotes,
-  diceValues,
-  diceRolling,
-  canRoll,
-  onRoll,
-  selectedDie,
-  onSelectDie,
-  turnRemainingSec,
 }: BoardProps) {
   const turnColor = game.players[game.turn]?.color
   const turnPlayer = game.players[game.turn]
@@ -292,86 +272,8 @@ export default function Board({
                     boxShadow: 'inset 0 2px 8px rgba(30,35,80,0.22), 0 1px 0 rgba(255,255,255,0.4)',
                   }}
                 >
-                  {/* profile avatar with turn-timer ring (active seats) */}
-                  {player && (
-                    <div className="absolute inset-x-0 top-[2%] z-10 flex justify-center">
-                      <div className="relative" style={{ width: '44%' }}>
-                        <div
-                          className="relative grid aspect-square w-full place-items-center rounded-full"
-                          style={{
-                            background: `radial-gradient(circle at 32% 28%, ${c.light}, ${c.main} 62%, ${c.dark})`,
-                            border: `2.5px solid ${isTurn ? '#ffffff' : 'rgba(255,255,255,0.75)'}`,
-                            boxShadow: isTurn ? `0 0 12px 3px ${c.glow}` : '0 2px 5px rgba(2,4,16,0.4)',
-                            fontSize: 'min(4.6vw, 22px)',
-                            lineHeight: 1,
-                          }}
-                        >
-                          <span className="drop-shadow">{player.avatar}</span>
-                        </div>
-                        {/* crown marker bobbing over the current player */}
-                        {isTurn && (
-                          <motion.span
-                            className="pointer-events-none absolute left-1/2 z-20"
-                            style={{ top: '-38%', fontSize: 'min(3.8vw, 19px)', filter: 'drop-shadow(0 2px 3px rgba(10,6,30,0.55))' }}
-                            animate={{ x: '-50%', y: [0, -3.5, 0] }}
-                            transition={{ repeat: Infinity, duration: 1.15, ease: 'easeInOut' }}
-                            aria-hidden
-                          >
-                            👑
-                          </motion.span>
-                        )}
-                        {/* turn-timer ring (graph of the 10s budget) */}
-                        {isTurn && turnRemainingSec != null && (
-                          <>
-                            <svg className="absolute -inset-[9%]" viewBox="0 0 40 40" style={{ transform: 'rotate(-90deg)' }}>
-                              <circle cx="20" cy="20" r="17" fill="none" stroke="rgba(20,26,60,0.30)" strokeWidth="3.4" />
-                              <circle
-                                cx="20"
-                                cy="20"
-                                r="17"
-                                fill="none"
-                                stroke={turnRemainingSec <= 3 ? '#ef4444' : '#ffd23e'}
-                                strokeWidth="3.4"
-                                strokeLinecap="round"
-                                strokeDasharray={`${Math.max(0, Math.min(1, turnRemainingSec / TURN_SECONDS)) * 106.8} 106.8`}
-                              />
-                            </svg>
-                            <span
-                              className="ls-font absolute -bottom-1.5 -right-1.5 rounded-full px-1 leading-tight"
-                              style={{
-                                background: turnRemainingSec <= 3
-                                  ? 'linear-gradient(180deg,#f4695f,#b02820)'
-                                  : 'linear-gradient(180deg,#ffe08a,#e09b1a)',
-                                color: turnRemainingSec <= 3 ? '#fff' : '#4a2c00',
-                                fontSize: 9,
-                                fontWeight: 900,
-                                boxShadow: '0 2px 5px rgba(2,4,16,0.45)',
-                              }}
-                            >
-                              {turnRemainingSec}s
-                            </span>
-                          </>
-                        )}
-                        {/* you badge */}
-                        {youColor === color && (
-                          <span
-                            className="ls-font absolute -left-2 -top-1 rounded-full px-1 leading-tight text-white"
-                            style={{
-                              background: 'linear-gradient(180deg,#3b82f6,#1d4ed8)',
-                              fontSize: 8,
-                              border: '1px solid rgba(255,255,255,0.85)',
-                              boxShadow: '0 2px 4px rgba(2,4,16,0.4)',
-                            }}
-                          >
-                            YOU
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* token slots (bottom half of the panel) */}
-                  <div className="absolute inset-x-[7%] bottom-[4%] top-[54%] grid grid-cols-2 grid-rows-2 place-items-center gap-[4%] p-[4%]">
+                  {/* token slots — 2x2 glossy pads filling the panel (Ludo Star yard) */}
+                  <div className="absolute inset-[6%] grid grid-cols-2 grid-rows-2 place-items-center gap-[3%] p-[3%]">
                     {YARD_SLOTS.map((slot, i) => {
                       const token = player?.tokens[i]
                       const inYard = token?.location === 'yard'
@@ -399,25 +301,6 @@ export default function Board({
                     })}
                   </div>
                 </div>
-
-                {/* name pill on the colored strip */}
-                {player && (
-                  <div className="absolute inset-x-0 bottom-[0.5%] flex justify-center">
-                    <span
-                      className="ls-font max-w-[94%] truncate rounded-full px-1.5 leading-tight text-white"
-                      style={{
-                        background: 'linear-gradient(180deg, rgba(10,14,40,0.72), rgba(10,14,40,0.55))',
-                        border: '1px solid rgba(255,255,255,0.35)',
-                        fontSize: 8.5,
-                        textShadow: '0 1px 0 rgba(2,4,16,0.7)',
-                      }}
-                    >
-                      {player.name.toUpperCase()}
-                      {player.isBot ? ' · BOT' : ''}
-                      {player.connected === false ? ' · OFF' : ''}
-                    </span>
-                  </div>
-                )}
               </div>
             )
           })}
@@ -610,25 +493,6 @@ export default function Board({
               </motion.div>
             ))}
           </AnimatePresence>
-
-          {/* a dice plate in EVERY active player's corner — Ludo Star style.
-              Only the turn player's plate is live; the others sit dimmed. */}
-          {game.phase !== 'gameover' &&
-            game.players.map((p) => (
-              <DiceSlot
-                key={`dice-${p.color}`}
-                color={p.color}
-                dimmed={p.color !== turnColor}
-                values={p.color === turnColor ? diceValues : []}
-                rolling={diceRolling && p.color === turnColor}
-                canRoll={canRoll && p.color === turnColor}
-                isYou={!!youColor && p.color === youColor}
-                usedDice={p.color === turnColor ? game.usedDice : []}
-                selectedDie={selectedDie ?? 0}
-                onSelectDie={onSelectDie}
-                onRoll={onRoll}
-              />
-            ))}
 
           {/* emote bubbles + quick-chat speech pills floating over the table */}
           <AnimatePresence>
