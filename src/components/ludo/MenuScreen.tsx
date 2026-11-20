@@ -25,7 +25,9 @@ import {
   IconGear, IconStarGold, HomeGlyph,
   CrownArt, DecoDie, DecoToken, ChestArt,
 } from '@/components/ludo/icons'
-import { useLudo, type GameHistoryEntry } from '@/stores/ludoStore'
+import { Art2P, Art4P, ArtPrivate, ArtOffline } from '@/components/ludo/MenuArt'
+import HistoryGraph from '@/components/ludo/HistoryGraph'
+import { useLudo } from '@/stores/ludoStore'
 import { AVATARS, FREE_REFILL, STAKES } from '@/lib/ludo/constants'
 import { ACHIEVEMENTS, BOT_FRIENDS, LEADERBOARD_SEED, levelFromWins, rankTitle } from '@/lib/ludo/social'
 import { DAILY_REWARDS } from '@/stores/ludoStore'
@@ -40,86 +42,6 @@ const EVENTS = [
   { icon: '🎁', title: 'Daily login streak', text: 'Claim growing coin rewards every single day.' },
   { icon: '🎉', title: 'Weekend tables', text: 'Bigger pots on Master mode every Saturday & Sunday.' },
 ]
-
-// ---------- tile artworks (original) ----------
-
-/** Big "2" + tokens + dice — 2 PLAYER tile. */
-function Art2P() {
-  return (
-    <svg viewBox="0 0 120 84" className="h-full w-full">
-      <ellipse cx="60" cy="70" rx="44" ry="9" fill="rgba(120,60,0,0.25)" />
-      <rect x="18" y="44" width="84" height="26" rx="7" fill="#fdf6e6" opacity="0.92" />
-      <rect x="18" y="44" width="22" height="26" rx="6" fill="#e5453c" />
-      <rect x="80" y="44" width="22" height="26" rx="6" fill="#2a8ee0" />
-      <rect x="40" y="44" width="40" height="26" fill="#fdf6e6" />
-      <circle cx="34" cy="57" r="7" fill="#b02820" stroke="#fff" strokeWidth="2" />
-      <circle cx="86" cy="57" r="7" fill="#1d5c9e" stroke="#fff" strokeWidth="2" />
-      <g transform="rotate(-12 74 30)">
-        <rect x="62" y="18" width="24" height="24" rx="6" fill="#fff" stroke="#d9cbb0" strokeWidth="1.5" />
-        <circle cx="68" cy="24" r="2.4" fill="#303a4e" />
-        <circle cx="80" cy="36" r="2.4" fill="#303a4e" />
-        <circle cx="74" cy="30" r="2.4" fill="#e5453c" />
-      </g>
-      <text x="34" y="42" textAnchor="middle" fontFamily="var(--font-lilita), Arial Rounded MT Bold, sans-serif" fontSize="44" fontWeight="900" fill="#e5453c" stroke="#fff" strokeWidth="5" paintOrder="stroke">2</text>
-    </svg>
-  )
-}
-
-/** Heart + tokens — PRIVATE TABLE tile. */
-function ArtPrivate() {
-  return (
-    <svg viewBox="0 0 120 84" className="h-full w-full">
-      <ellipse cx="60" cy="72" rx="42" ry="8" fill="rgba(20,5,50,0.35)" />
-      <rect x="24" y="40" width="72" height="24" rx="7" fill="#fdf6e6" opacity="0.92" />
-      <rect x="24" y="40" width="20" height="24" rx="6" fill="#46a848" />
-      <rect x="76" y="40" width="20" height="24" rx="6" fill="#2a8ee0" />
-      <circle cx="36" cy="52" r="6.5" fill="#2f7c33" stroke="#fff" strokeWidth="2" />
-      <circle cx="84" cy="52" r="6.5" fill="#1d5c9e" stroke="#fff" strokeWidth="2" />
-      <path d="M60 16c5-8 16-8 20 0 4 8-2 14-9 19l-2 1.6-2-1.6c-7-5-13-11-9-19 4-8 15-8 20 0" fill="#e5453c" stroke="#fff" strokeWidth="3" transform="translate(-8 0) scale(1.06)" />
-    </svg>
-  )
-}
-
-/** Robot + board strip — OFFLINE tile. */
-function ArtOffline() {
-  return (
-    <svg viewBox="0 0 120 84" className="h-full w-full">
-      <ellipse cx="60" cy="72" rx="42" ry="8" fill="rgba(8,40,20,0.4)" />
-      <rect x="20" y="42" width="80" height="24" rx="7" fill="#fdf6e6" opacity="0.92" />
-      <rect x="20" y="42" width="20" height="24" rx="6" fill="#e5453c" />
-      <rect x="80" y="42" width="20" height="24" rx="6" fill="#46a848" />
-      <circle cx="32" cy="54" r="6.5" fill="#b02820" stroke="#fff" strokeWidth="2" />
-      <circle cx="88" cy="54" r="6.5" fill="#2f7c33" stroke="#fff" strokeWidth="2" />
-      <g>
-        <line x1="60" y1="13" x2="60" y2="20" stroke="#a7f3d0" strokeWidth="2.6" strokeLinecap="round" />
-        <circle cx="60" cy="11.5" r="3" fill="#6ee7b7" stroke="#fff" strokeWidth="1.4" />
-        <rect x="44" y="20" width="32" height="24" rx="8" fill="url(#off-g)" stroke="#fff" strokeWidth="2.4" />
-        <circle cx="54" cy="30.5" r="3.4" fill="#0e3a55" stroke="#fff" strokeWidth="1.6" />
-        <circle cx="66" cy="30.5" r="3.4" fill="#0e3a55" stroke="#fff" strokeWidth="1.6" />
-        <rect x="55" y="37" width="10" height="2.6" rx="1.3" fill="#0e3a55" opacity="0.8" />
-      </g>
-      <defs>
-        <linearGradient id="off-g" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#d1fae5" />
-          <stop offset="1" stopColor="#5eead4" />
-        </linearGradient>
-      </defs>
-    </svg>
-  )
-}
-
-/** "4" + tokens — 4 PLAYER tile. */
-function Art4P() {
-  return (
-    <svg viewBox="0 0 100 62" className="h-full w-full">
-      <text x="30" y="46" textAnchor="middle" fontFamily="var(--font-lilita), Arial Rounded MT Bold, sans-serif" fontSize="40" fontWeight="900" fill="#f7c331" stroke="#fff" strokeWidth="4" paintOrder="stroke">4</text>
-      <circle cx="58" cy="20" r="8.5" fill="#e5453c" stroke="#fff" strokeWidth="2.2" />
-      <circle cx="74" cy="20" r="8.5" fill="#46a848" stroke="#fff" strokeWidth="2.2" />
-      <circle cx="58" cy="38" r="8.5" fill="#2a8ee0" stroke="#fff" strokeWidth="2.2" />
-      <circle cx="74" cy="38" r="8.5" fill="#f7c331" stroke="#fff" strokeWidth="2.2" />
-    </svg>
-  )
-}
 
 // ---------- shared atoms ----------
 
@@ -159,125 +81,6 @@ function CurrencyChip({
 }
 
 // ---------- main screen ----------
-
-/** Timestamped timeline graph of recent games (coin balance + W/L dots). */
-function HistoryGraph({ history, coins }: { history: GameHistoryEntry[]; coins: number }) {
-  const pts = history.slice(-14)
-  const W = 300
-  const H = 116
-  const PAD_X = 14
-  const PAD_TOP = 10
-  const PAD_BOTTOM = 22
-
-  // walk backwards from the current balance to get the balance after each game
-  const balances: number[] = new Array(pts.length)
-  let bal = coins
-  for (let i = pts.length - 1; i >= 0; i--) {
-    balances[i] = bal
-    bal -= pts[i].delta
-  }
-  const startBal = bal
-  const all = pts.length > 0 ? [...balances, startBal] : [coins]
-  const min = Math.min(...all)
-  const max = Math.max(...all)
-  const span = Math.max(1, max - min)
-
-  const x = (i: number) => (pts.length <= 1 ? W / 2 : PAD_X + (i / (pts.length - 1)) * (W - PAD_X * 2))
-  const y = (v: number) => PAD_TOP + (1 - (v - min) / span) * (H - PAD_TOP - PAD_BOTTOM)
-
-  const fmtT = (t: number) => {
-    const d = new Date(t)
-    const sameDay = new Date().toDateString() === d.toDateString()
-    return sameDay
-      ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      : d.toLocaleDateString([], { day: 'numeric', month: 'short' })
-  }
-  const fmtC = (v: number) => (Math.abs(v) >= 1000 ? `${(v / 1000).toFixed(1)}k` : `${Math.round(v)}`)
-
-  return (
-    <div className="ls-panel rounded-2xl p-3.5">
-      <div className="mb-1.5 flex items-center justify-between">
-        <p className="ls-font text-xs text-amber-200">RECENT GAMES TIMELINE</p>
-        <span className="text-[9px] text-fuchsia-100/50">{history.length} recorded</span>
-      </div>
-      {pts.length === 0 ? (
-        <p className="py-5 text-center text-[11px] text-fuchsia-100/50">
-          Finish a game — your win/loss timeline graph appears here.
-        </p>
-      ) : (
-        <>
-          <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Coin balance over recent games">
-            {/* grid lines */}
-            {[0.25, 0.5, 0.75].map((f) => {
-              const gy = PAD_TOP + f * (H - PAD_TOP - PAD_BOTTOM)
-              return <line key={f} x1={PAD_X} x2={W - PAD_X} y1={gy} y2={gy} stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
-            })}
-            {/* starting balance baseline */}
-            <line
-              x1={PAD_X}
-              x2={W - PAD_X}
-              y1={y(startBal)}
-              y2={y(startBal)}
-              stroke="rgba(246,196,83,0.4)"
-              strokeWidth="1"
-              strokeDasharray="4 3"
-            />
-            {/* balance line */}
-            <polyline
-              points={balances.map((v, i) => `${x(i)},${y(v)}`).join(' ')}
-              fill="none"
-              stroke="#c4b5fd"
-              strokeWidth="2.2"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
-            {/* dots: green win / red loss */}
-            {balances.map((v, i) => (
-              <circle
-                key={i}
-                cx={x(i)}
-                cy={y(v)}
-                r={pts[i].won ? 4 : 3}
-                fill={pts[i].won ? '#34d399' : '#f87171'}
-                stroke="rgba(10,6,30,0.7)"
-                strokeWidth="1.2"
-              />
-            ))}
-            {/* time labels: first & last */}
-            <text x={PAD_X} y={H - 6} fill="rgba(243,232,255,0.6)" fontSize="9" textAnchor="start">
-              {fmtT(pts[0].t)}
-            </text>
-            <text x={W - PAD_X} y={H - 6} fill="rgba(243,232,255,0.6)" fontSize="9" textAnchor="end">
-              {fmtT(pts[pts.length - 1].t)}
-            </text>
-            {/* min/max value labels */}
-            <text x={W - PAD_X} y={y(max) + 9} fill="rgba(255,224,138,0.85)" fontSize="9" textAnchor="end">
-              {fmtC(max)}
-            </text>
-            <text x={W - PAD_X} y={y(min) - 3} fill="rgba(243,232,255,0.55)" fontSize="9" textAnchor="end">
-              {fmtC(min)}
-            </text>
-          </svg>
-          {/* W/L streak row */}
-          <div className="mt-2 flex items-center gap-1.5 border-t border-white/10 pt-2">
-            <span className="text-[9px] uppercase tracking-wide text-fuchsia-100/50">W/L</span>
-            {pts.map((p, i) => (
-              <span
-                key={i}
-                title={fmtT(p.t)}
-                className="h-2.5 w-2.5 rounded-full"
-                style={{ background: p.won ? '#34d399' : '#f87171' }}
-              />
-            ))}
-            <span className="ls-font ml-auto text-[10px] text-fuchsia-100/70">
-              {pts.filter((p) => p.won).length}/{pts.length} won
-            </span>
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
 
 export default function MenuScreen() {
   const profile = useLudo((s) => s.profile)

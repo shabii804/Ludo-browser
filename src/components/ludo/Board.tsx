@@ -11,7 +11,7 @@
 // Geometry & interaction logic preserved.
 // ============================================================
 
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Color, GameState } from '@/lib/ludo/types'
 import {
@@ -55,6 +55,17 @@ interface BoardProps {
 }
 
 const pct = (v: number) => `${(v / BOARD_SIZE) * 100}%`
+
+/** how long a moved token keeps its "lift" movement emphasis (ms) */
+const HOP_MS = 520
+
+/** where quick-chat speech pills hover, per corner (toward the board center) */
+const TEXT_PILL_POS: Record<Color, { c: number; r: number }> = {
+  red: { c: 4.5, r: 4.3 },
+  green: { c: 1.9, r: 4.3 },
+  yellow: { c: 1.9, r: 6.9 },
+  blue: { c: 4.5, r: 6.9 },
+}
 
 const CELL_BORDER = '#c9cdf2'
 const CELL_BG = 'linear-gradient(160deg, #ffffff 0%, #eef1ff 100%)'
@@ -152,6 +163,11 @@ export default function Board({
     return map
   }, [game])
 
+  // movement emphasis: remembers each token's last cell so a token whose
+  // cell changed gets a temporary lift (scale + glow) while it glides
+  const prevPosRef = useRef<Map<string, string>>(new Map())
+  const hopUntilRef = useRef<Map<string, number>>(new Map())
+
   return (
     <div className="relative w-full aspect-square select-none" style={{ maxWidth: 'min(92vw, 58vh)', margin: '0 auto' }}>
       {/* deep blue frame with gold trim (Ludo Star table feel) */}
@@ -224,6 +240,18 @@ export default function Board({
                         >
                           <span className="drop-shadow">{player.avatar}</span>
                         </div>
+                        {/* crown marker bobbing over the current player */}
+                        {isTurn && (
+                          <motion.span
+                            className="pointer-events-none absolute left-1/2 z-20"
+                            style={{ top: '-38%', fontSize: 'min(3.8vw, 19px)', filter: 'drop-shadow(0 2px 3px rgba(10,6,30,0.55))' }}
+                            animate={{ x: '-50%', y: [0, -3.5, 0] }}
+                            transition={{ repeat: Infinity, duration: 1.15, ease: 'easeInOut' }}
+                            aria-hidden
+                          >
+                            👑
+                          </motion.span>
+                        )}
                         {/* turn-timer ring (graph of the 10s budget) */}
                         {isTurn && turnRemainingSec != null && (
                           <>
@@ -395,7 +423,9 @@ export default function Board({
               })
           )}
 
-          {/* tokens on track + home lane — smooth glide between cells */}
+          {/* tokens on track + home lane — smooth glide between cells.
+              A token whose cell just changed gets a temporary "lift"
+              (scale + colored glow) so every move reads clearly. */}
           {game.players.map((p) =>
             p.tokens
               .filter((t) => t.location === 'track' || t.location === 'home')
@@ -405,8 +435,15 @@ export default function Board({
                 const pos = tokenScreenPos(p.color, t.id, t.location, t.trackIdx, t.homeStep, stackIndex, stack.length)
                 const w = 0.96
                 const isGlowing = glow(p.color, t.id)
+                // lift the token whose position just changed (movement emphasis)
+                const tKey = `${p.color}-${t.id}`
+                const posKey = `${pos.x.toFixed(2)}|${pos.y.toFixed(2)}`
+                const prevKey = prevPosRef.current.get(tKey)
+                if (prevKey && prevKey !== posKey) hopUntilRef.current.set(tKey, Date.now() + HOP_MS)
+                prevPosRef.current.set(tKey, posKey)
+                const hopping = (hopUntilRef.current.get(tKey) ?? 0) > Date.now()
                 return (
-                  <div
+                  <motion.div
                     key={`m-${p.color}-${t.id}`}
                     className="absolute"
                     style={{
@@ -414,9 +451,12 @@ export default function Board({
                       top: `calc(${pos.y}% - ${(w / 2 / BOARD_SIZE) * 100}%)`,
                       width: pct(w),
                       height: pct(w),
-                      zIndex: isGlowing ? 25 : 15,
+                      zIndex: hopping ? 30 : isGlowing ? 25 : 15,
                       transition: 'left 300ms cubic-bezier(0.4, 0, 0.2, 1), top 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+                      willChange: 'transform',
                     }}
+                    animate={{ scale: hopping ? 1.28 : 1 }}
+                    transition={{ type: 'spring', stiffness: 330, damping: hopping ? 14 : 20 }}
                   >
                     <Pawn
                       color={p.color}
@@ -426,7 +466,13 @@ export default function Board({
                       tokenId={t.id}
                       uid={`t${p.color}${t.id}`}
                     />
-                  </div>
+                    {hopping && (
+                      <span
+                        className="pointer-events-none absolute inset-[-18%] rounded-full"
+                        style={{ boxShadow: `0 8px 18px ${COLOR_HEX[p.color].glow}` }}
+                      />
+                    )}
+                  </motion.div>
                 )
               })
           )}
@@ -450,10 +496,37 @@ export default function Board({
               />
             ))}
 
-          {/* emote bubbles floating over yards */}
+          {/* emote bubbles + quick-chat speech pills floating over the table */}
           <AnimatePresence>
             {emotes.map((e) => {
               const base = YARD_BASE[e.color]
+              // text quick-chats ride the emote channel — render as a speech pill
+              // anchored toward the board center; real emoji stay round bubbles
+              if (e.emoji.length > 2) {
+                const a = TEXT_PILL_POS[e.color]
+                return (
+                  <motion.div
+                    key={e.id}
+                    initial={{ opacity: 0, scale: 0.6, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: -2 }}
+                    exit={{ opacity: 0, scale: 0.8, y: -16 }}
+                    transition={{ type: 'spring', stiffness: 380, damping: 20 }}
+                    className="ls-font absolute z-40 flex items-center justify-center rounded-2xl px-1.5 py-1 text-center leading-tight"
+                    style={{
+                      left: pct(a.c),
+                      top: pct(a.r),
+                      width: pct(5.6),
+                      background: 'linear-gradient(180deg,#ffffff,#eef1fb)',
+                      border: `2px solid ${COLOR_HEX[e.color].main}`,
+                      boxShadow: `0 4px 10px rgba(10,14,40,0.4), 0 0 12px ${COLOR_HEX[e.color].glow}55`,
+                      fontSize: 'min(2.6vw, 11.5px)',
+                      color: '#1e2440',
+                    }}
+                  >
+                    {e.emoji}
+                  </motion.div>
+                )
+              }
               return (
                 <motion.div
                   key={e.id}
