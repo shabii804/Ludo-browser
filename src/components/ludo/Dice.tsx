@@ -1,10 +1,13 @@
 'use client'
 
 // ============================================================
-// Dice — shared glossy die face + CornerDiceSlot.
+// Dice — premium 3D ceramic die + DiceSlot platform.
 // The dice lives in the CORNER of the player whose turn it is
 // (Ludo Star style): a compact holder anchored to that player's
-// yard, tap to roll. Master mode shows two mini dice.
+// yard, tap to roll. Each plate is tinted with the player color,
+// the TURN player's plate glows gold and the die glows in the
+// player color. Landing dice bounce-squash; rolling dice tumble
+// in 3D. Master mode shows two mini dice. Same props/behavior.
 // ============================================================
 
 import { motion } from 'framer-motion'
@@ -25,27 +28,56 @@ export function DieFace({
   used = false,
   className = '',
   style,
+  /** soft colored glow matching the owner player (optional) */
+  glowColor,
 }: {
   value: number
   used?: boolean
   className?: string
   style?: React.CSSProperties
+  glowColor?: string
 }) {
+  // 3D cube illusion: glossy ceramic face + hard slab edge at the
+  // bottom (thickness) + ambient drop + inner bevels on all sides
+  const outer: React.CSSProperties = used
+    ? { boxShadow: '0 4px 0 rgba(122,131,164,0.9), 0 8px 14px rgba(10,14,40,0.4)' }
+    : {
+        boxShadow: [
+          glowColor ? `0 0 16px 3px ${glowColor}` : null,
+          '0 5px 0 #9fa8c9',
+          '0 10px 18px rgba(10,14,40,0.5)',
+          'inset 0 2px 0 rgba(255,255,255,0.95)',
+          'inset 0 -3px 6px rgba(90,100,160,0.30)',
+          'inset 2px 0 3px rgba(255,255,255,0.4)',
+          'inset -2px 0 4px rgba(90,100,160,0.22)',
+        ]
+          .filter(Boolean)
+          .join(', '),
+      }
+
   return (
     <div
-      className={`relative h-full w-full rounded-[24%] ${className}`}
+      className={`relative h-full w-full rounded-[26%] ${className}`}
       style={{
         ...style,
+        ...outer,
         background: used
-          ? 'linear-gradient(145deg,#9aa5c0,#6e7ca0)'
-          : 'linear-gradient(150deg,#ffffff 18%,#eceffb 88%)',
-        border: '2px solid #b9c0e8',
-        boxShadow: used
-          ? 'inset 0 3px 10px rgba(20,25,60,0.45)'
-          : '0 5px 12px rgba(10,14,40,0.5), inset 0 -4px 8px rgba(90,100,160,0.22), inset 0 2px 0 rgba(255,255,255,0.95)',
+          ? 'linear-gradient(150deg,#a7b0cb 0%,#7e89ad 60%,#67719a 100%)'
+          : 'linear-gradient(155deg,#ffffff 0%,#f7f8ff 48%,#e2e7f8 100%)',
+        border: '2px solid #c3c9e8',
         opacity: used ? 0.45 : 1,
       }}
     >
+      {/* glossy sheen sweep */}
+      {!used && (
+        <span
+          className="pointer-events-none absolute inset-0 rounded-[26%]"
+          style={{
+            background:
+              'linear-gradient(128deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.25) 30%, transparent 52%)',
+          }}
+        />
+      )}
       {(PIP[value] ?? PIP[1]).map(([x, y], i) => (
         <span
           key={i}
@@ -53,11 +85,13 @@ export function DieFace({
           style={{
             left: `${x}%`,
             top: `${y}%`,
-            width: '21%',
-            height: '21%',
+            width: '20%',
+            height: '20%',
             transform: 'translate(-50%,-50%)',
-            background: used ? '#8fa0b5' : 'radial-gradient(circle at 35% 30%, #3d4766, #141a33 70%)',
-            boxShadow: 'inset 0 2px 3px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.5)',
+            background: used ? '#8fa0b5' : 'radial-gradient(circle at 35% 30%, #39415e, #05070f 72%)',
+            boxShadow: used
+              ? 'inset 0 2px 3px rgba(20,25,50,0.5)'
+              : 'inset 0 2.5px 4px rgba(0,0,0,0.8), inset 0 -1px 1px rgba(120,130,170,0.35), 0 1px 0 rgba(255,255,255,0.6)',
           }}
         />
       ))}
@@ -140,19 +174,21 @@ export function DiceSlot({
       className="absolute z-30"
       style={{ left: pctUnit(anchor.c), top: pctUnit(anchor.r), width: pctUnit(size), height: pctUnit(size) }}
     >
-      {/* holder plate */}
+      {/* colored platform: player-tinted glass plate + gold ring when live */}
       <div
         className="absolute inset-0 rounded-[22%]"
         style={{
-          background: 'linear-gradient(160deg, rgba(255,255,255,0.22), rgba(10,14,40,0.30))',
-          border: `1.5px solid ${c.main}`,
-          boxShadow: showTap ? `0 0 14px 2px ${c.glow}` : '0 4px 10px rgba(10,14,40,0.35)',
+          background: `radial-gradient(circle at 50% 40%, ${c.main}38, transparent 72%), linear-gradient(160deg, rgba(255,255,255,0.24), rgba(10,14,40,0.34))`,
+          border: `1.5px solid ${showTap ? '#f6c453' : c.main}`,
+          boxShadow: showTap
+            ? `0 0 0 2px rgba(246,196,83,0.4), 0 0 22px 6px ${c.glow}, inset 0 1px 0 rgba(255,255,255,0.4)`
+            : `0 4px 10px rgba(10,14,40,0.35), 0 0 10px ${c.glow}66, inset 0 1px 0 rgba(255,255,255,0.35)`,
           backdropFilter: 'blur(2px)',
         }}
       />
 
       {rolling ? (
-        <div className="absolute inset-[10%] grid place-items-center">
+        <div className="absolute inset-[10%] grid place-items-center" style={{ perspective: 420 }}>
           <motion.div
             className="h-full w-full"
             animate={{
@@ -160,25 +196,31 @@ export function DiceSlot({
               rotateY: [0, 120, 240, 480, 600],
               rotate: [0, 40, 0, -30, 0],
               scale: [1, 1.16, 0.94, 1.1, 1],
+              y: [0, -9, 0, -5, 0],
             }}
             transition={{ repeat: Infinity, duration: 0.62, ease: 'easeInOut' }}
-            style={{ transformStyle: 'preserve-3d', perspective: 400 }}
+            style={{ transformStyle: 'preserve-3d' }}
           >
-            <DieFace value={3} />
+            <DieFace value={3} glowColor={c.glow} />
           </motion.div>
         </div>
       ) : twoDice ? (
         <div className="absolute inset-[8%] flex items-center justify-center gap-[6%]">
           {values.map((v, i) => (
             <motion.button
-              key={i}
+              key={`${values.join('-')}-${i}`}
               className={`relative aspect-square w-[44%] ${!usedDice.includes(i) && onSelectDie ? 'cursor-pointer' : ''}`}
               onClick={!usedDice.includes(i) && onSelectDie ? () => onSelectDie(i) : undefined}
-              animate={!usedDice.includes(i) && selectedDie === i ? { y: -4, scale: 1.12 } : { y: 0, scale: 1 }}
-              transition={{ type: 'spring', stiffness: 320, damping: 15 }}
+              initial={{ scale: 1.35, y: -14, rotate: -8, opacity: 0.5 }}
+              animate={
+                !usedDice.includes(i) && selectedDie === i
+                  ? { scale: 1.12, y: -4, rotate: 0, opacity: 1 }
+                  : { scale: 1, y: 0, rotate: 0, opacity: 1 }
+              }
+              transition={{ type: 'spring', stiffness: 460, damping: 16 }}
               aria-label={`Die ${i + 1} showing ${v}${usedDice.includes(i) ? ' (used)' : ''}`}
             >
-              <DieFace value={v} used={usedDice.includes(i)} />
+              <DieFace value={v} used={usedDice.includes(i)} glowColor={usedDice.includes(i) ? undefined : c.glow} />
               {!usedDice.includes(i) && selectedDie === i && (
                 <span className="absolute -inset-[18%] rounded-[30%] border-[2.5px] border-white/90" />
               )}
@@ -188,20 +230,26 @@ export function DiceSlot({
       ) : (
         <div className="absolute inset-[10%] grid place-items-center">
           <motion.button
+            key={`v${values[0] ?? 'e'}`}
             className={`relative h-full w-full ${showTap ? 'cursor-pointer' : ''}`}
             onClick={showTap ? onRoll : undefined}
+            initial={values.length > 0 ? { scale: 1.45, y: -20, rotate: -12, opacity: 0.4 } : false}
             animate={
               showTap
-                ? { scale: [1, 1.1, 1] }
-                : { scale: 1, opacity: values.length === 0 ? 0.5 : 1 }
+                ? { scale: [1, 1.1, 1], y: 0, rotate: 0, opacity: 1 }
+                : { scale: 1, y: 0, rotate: 0, opacity: values.length === 0 ? 0.5 : 1 }
             }
-            transition={showTap ? { repeat: Infinity, duration: 0.9, ease: 'easeInOut' } : { duration: 0.2 }}
+            transition={
+              showTap
+                ? { scale: { repeat: Infinity, duration: 0.9, ease: 'easeInOut' } }
+                : { type: 'spring', stiffness: 460, damping: 15, opacity: { duration: 0.12 } }
+            }
             whileTap={showTap ? { scale: 0.85 } : undefined}
             role={showTap ? 'button' : undefined}
             aria-disabled={!showTap}
             aria-label={showTap ? 'Roll dice' : values.length > 0 ? `Dice showing ${values[0]}` : undefined}
           >
-            <DieFace value={values[0] ?? 6} used={usedDice.includes(0)} />
+            <DieFace value={values[0] ?? 6} used={usedDice.includes(0)} glowColor={usedDice.includes(0) ? undefined : c.glow} />
             {showTap && isYou && (
               <motion.span
                 className="ls-font absolute -top-[34%] left-1/2 -translate-x-1/2 rounded-full px-2.5 py-0.5 text-[11px] leading-tight text-white"

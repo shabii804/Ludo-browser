@@ -5,13 +5,13 @@
 // each ACTIVE yard carries the player's profile avatar with a
 // turn-timer ring; EVERY active corner holds a dice plate (only
 // the turn player's plate is interactive, the rest are dimmed);
-// tokens are clear ROUND discs; ONLY the turn player's movable
+// tokens are premium 3D pawn pieces (gem cut + gold crown); ONLY the turn player's movable
 // tokens glow (bots' movable tokens glow too, so you can always
 // read whose turn it is); unused yards are dimmed gray.
 // Geometry & interaction logic preserved.
 // ============================================================
 
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Color, GameState } from '@/lib/ludo/types'
 import {
@@ -28,6 +28,7 @@ import {
 } from '@/lib/ludo/board'
 import { legalMoves } from '@/lib/ludo/engine'
 import { DiceSlot } from '@/components/ludo/Dice'
+import Pawn3D from '@/components/ludo/Pawn3D'
 import { TURN_SECONDS } from '@/lib/ludo/constants'
 
 interface BoardProps {
@@ -71,19 +72,21 @@ const CELL_BORDER = '#c9cdf2'
 const CELL_BG = 'linear-gradient(160deg, #ffffff 0%, #eef1ff 100%)'
 const SAFE_BG = 'linear-gradient(160deg, #f2f4ff 0%, #e3e8fb 100%)'
 
+const BEVEL_LIGHT = 'inset 0 1.5px 0 rgba(255,255,255,0.9), inset 0 -2px 3px rgba(30,40,90,0.10)'
+
 function cellStyle(isSafe: boolean, isStar: boolean, owner: Color | null) {
   if (owner) {
     const c = COLOR_HEX[owner]
     return {
       background: `linear-gradient(150deg, ${c.light} -18%, ${c.main} 55%, ${c.dark} 130%)`,
       border: `1px solid ${c.dark}`,
-      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35)',
+      boxShadow: 'inset 0 1.5px 0 rgba(255,255,255,0.5), inset 0 -2px 3px rgba(0,0,0,0.22)',
     }
   }
   if (isSafe && !isStar) {
-    return { background: SAFE_BG, border: `1px solid ${CELL_BORDER}` }
+    return { background: SAFE_BG, border: `1px solid ${CELL_BORDER}`, boxShadow: BEVEL_LIGHT }
   }
-  return { background: CELL_BG, border: `1px solid ${CELL_BORDER}` }
+  return { background: CELL_BG, border: `1px solid ${CELL_BORDER}`, boxShadow: BEVEL_LIGHT }
 }
 
 export default function Board({
@@ -168,28 +171,93 @@ export default function Board({
   const prevPosRef = useRef<Map<string, string>>(new Map())
   const hopUntilRef = useRef<Map<string, number>>(new Map())
 
+  // capture FX — when a token is knocked back home (track → yard)
+  // a sparkling ring burst plays on the yard slot it lands in
+  const prevLocRef = useRef<Map<string, string>>(new Map())
+  const [captureFx, setCaptureFx] = useState<Array<{ key: string; color: Color; c: number; r: number }>>([])
+  useEffect(() => {
+    const found: Array<{ key: string; color: Color; c: number; r: number }> = []
+    for (const p of game.players) {
+      for (const t of p.tokens) {
+        const k = `${p.color}-${t.id}`
+        const prev = prevLocRef.current.get(k)
+        if (prev === 'track' && t.location === 'yard') {
+          const base = YARD_BASE[p.color]
+          const slot = YARD_SLOTS[t.id % 4]
+          found.push({ key: `${k}-${Date.now()}`, color: p.color, c: base.c + slot.c, r: base.r + slot.r })
+        }
+        prevLocRef.current.set(k, t.location)
+      }
+    }
+    if (found.length > 0) {
+      const keys = found.map((f) => f.key)
+      setCaptureFx((fx) => [...fx, ...found])
+      const timer = setTimeout(() => setCaptureFx((fx) => fx.filter((f) => !keys.includes(f.key))), 950)
+      return () => clearTimeout(timer)
+    }
+  }, [game])
+
   return (
     <div className="relative w-full aspect-square select-none" style={{ maxWidth: 'min(92vw, 58vh)', margin: '0 auto' }}>
-      {/* deep blue frame with gold trim (Ludo Star table feel) */}
+      {/* deep blue leather frame with beveled gold trim (Ludo Star table feel) */}
       <div
         className="absolute inset-0 rounded-[6%]"
         style={{
-          background: 'linear-gradient(155deg, #1c3f7a 0%, #122a56 45%, #0a1734 100%)',
+          background: 'linear-gradient(155deg, #1e4284 0%, #122a56 45%, #08122e 100%)',
           boxShadow:
-            '0 24px 55px rgba(2,6,18,0.7), 0 0 40px rgba(59,130,246,0.18), inset 0 2px 0 rgba(147,197,253,0.30), inset 0 -4px 10px rgba(0,0,0,0.4)',
+            '0 26px 60px rgba(2,6,18,0.75), 0 0 46px rgba(59,130,246,0.20), inset 0 2px 0 rgba(147,197,253,0.32), inset 0 -5px 12px rgba(0,0,0,0.45), inset 3px 0 8px rgba(147,197,253,0.10), inset -3px 0 8px rgba(0,0,0,0.30)',
         }}
       />
-      {/* gold trim ring */}
+      {/* frame gloss sweep */}
+      <div
+        className="pointer-events-none absolute inset-0 rounded-[6%]"
+        style={{
+          background: 'linear-gradient(118deg, rgba(255,255,255,0.10) 0%, transparent 30%, transparent 72%, rgba(255,255,255,0.05) 100%)',
+        }}
+      />
+      {/* two-tone beveled gold trim */}
       <div
         className="absolute inset-[1.8%] rounded-[5%]"
         style={{
-          background: 'linear-gradient(180deg, #f3d98b, #d9a636)',
-          boxShadow: 'inset 0 1px 0 rgba(255,240,200,0.8), 0 2px 6px rgba(0,0,0,0.35)',
+          background: 'linear-gradient(180deg, #f6dd93 0%, #d9a636 55%, #b9851f 100%)',
+          boxShadow: 'inset 0 1px 0 rgba(255,244,200,0.9), inset 0 -1px 0 rgba(90,50,0,0.5), 0 2px 6px rgba(0,0,0,0.35)',
         }}
       />
-      {/* board interior */}
-      <div className="absolute inset-[3.4%] overflow-hidden rounded-[4%]" style={{ background: '#f2f4ff' }}>
+      <div
+        className="pointer-events-none absolute inset-[1.8%] rounded-[5%]"
+        style={{
+          background: 'linear-gradient(115deg, rgba(255,255,255,0.5) 2%, transparent 26%, transparent 78%, rgba(255,246,200,0.35) 98%)',
+        }}
+      />
+      {/* dark well between trim and interior — adds height/depth */}
+      <div
+        className="absolute inset-[2.9%] rounded-[4.5%]"
+        style={{
+          background: 'linear-gradient(180deg, rgba(20,14,50,0.92), rgba(8,6,28,0.92))',
+          boxShadow: 'inset 0 3px 8px rgba(0,0,0,0.65)',
+        }}
+      />
+      {/* board interior (sits inside the shadowed well) */}
+      <div
+        className="absolute inset-[3.4%] overflow-hidden rounded-[4%]"
+        style={{ background: '#f2f4ff', boxShadow: 'inset 0 6px 16px rgba(8,12,40,0.30), inset 0 -5px 12px rgba(8,12,40,0.22)' }}
+      >
         <div className="relative h-full w-full">
+          {/* shared svg defs (safe-cell star gradient) */}
+          <svg width="0" height="0" className="absolute">
+            <defs>
+              <linearGradient id="ls-star-grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#e6ebff" />
+                <stop offset="0.5" stopColor="#aeb7dd" />
+                <stop offset="1" stopColor="#7d87b5" />
+              </linearGradient>
+            </defs>
+          </svg>
+          {/* soft interior vignette (under all pieces) */}
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{ background: 'radial-gradient(115% 115% at 50% 42%, transparent 62%, rgba(10,14,40,0.12) 100%)' }}
+          />
           {/* yards */}
           {(Object.keys(YARD_BASE) as Color[]).map((color) => {
             const base = YARD_BASE[color]
@@ -312,12 +380,12 @@ export default function Board({
                           <span
                             className="absolute inset-0 rounded-full"
                             style={{
-                              background: 'rgba(255,255,255,0.7)',
-                              boxShadow: `inset 0 0 0 2.5px ${c.main}55, inset 0 2px 4px rgba(30,35,80,0.15)`,
+                              background: 'linear-gradient(165deg, rgba(255,255,255,0.92), rgba(255,255,255,0.5))',
+                              boxShadow: `inset 0 2px 5px rgba(30,35,80,0.2), inset 0 0 0 2.5px ${c.main}55, 0 1px 0 rgba(255,255,255,0.65)`,
                             }}
                           />
                           {inYard && token && (
-                            <Pawn
+                            <Pawn3D
                               color={color}
                               glow={glow(color, token.id)}
                               tap={clickable(color, token.id)}
@@ -370,29 +438,66 @@ export default function Board({
                 }}
               >
                 {cell.star && (
-                  <svg viewBox="0 0 24 24" className="h-[70%] w-[70%] fill-current text-[#8f97c4] opacity-90">
-                    <path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z" />
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="h-[72%] w-[72%]"
+                    style={{ filter: 'drop-shadow(0 1.5px 1px rgba(20,26,60,0.35))' }}
+                  >
+                    <path
+                      d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"
+                      fill="url(#ls-star-grad)"
+                      stroke="rgba(255,255,255,0.9)"
+                      strokeWidth="1"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                 )}
               </div>
             )
           })}
 
-          {/* center home triangles + gold star medallion */}
-          <div className="absolute" style={{ left: pct(6), top: pct(6), width: pct(3), height: pct(3) }}>
+          {/* center home triangles + beveled gold star medallion */}
+          <div
+            className="absolute"
+            style={{ left: pct(6), top: pct(6), width: pct(3), height: pct(3), filter: 'drop-shadow(0 3px 6px rgba(10,14,40,0.45))' }}
+          >
             <svg viewBox="0 0 90 90" className="h-full w-full">
+              <defs>
+                <radialGradient id="ls-med-ring" cx="0.5" cy="0.32" r="0.9">
+                  <stop offset="0" stopColor="#ffe9a8" />
+                  <stop offset="0.55" stopColor="#d9a636" />
+                  <stop offset="1" stopColor="#a87712" />
+                </radialGradient>
+                <radialGradient id="ls-med-core" cx="0.42" cy="0.34" r="0.9">
+                  <stop offset="0" stopColor="#fffdf4" />
+                  <stop offset="0.72" stopColor="#f7efcf" />
+                  <stop offset="1" stopColor="#e6d5a0" />
+                </radialGradient>
+                <linearGradient id="ls-med-star" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stopColor="#ffe08a" />
+                  <stop offset="0.55" stopColor="#f0a10c" />
+                  <stop offset="1" stopColor="#c77b08" />
+                </linearGradient>
+              </defs>
               <polygon points="0,0 45,45 0,90" fill={COLOR_HEX.red.main} />
               <polygon points="0,0 45,45 90,0" fill={COLOR_HEX.green.main} />
               <polygon points="90,0 45,45 90,90" fill={COLOR_HEX.yellow.main} />
               <polygon points="0,90 45,45 90,90" fill={COLOR_HEX.blue.main} />
-              <polygon points="0,0 45,45 0,90" fill="rgba(255,255,255,0.14)" />
-              <polygon points="90,0 45,45 90,90" fill="rgba(0,0,0,0.10)" />
-              <circle cx="45" cy="45" r="13" fill="#fdf8ea" stroke="#d9a636" strokeWidth="3" />
+              {/* triangle sheens for a lit, dimensional center */}
+              <polygon points="0,0 45,45 0,90" fill="rgba(255,255,255,0.18)" />
+              <polygon points="90,0 45,45 90,90" fill="rgba(255,255,255,0.08)" />
+              <polygon points="0,90 45,45 90,90" fill="rgba(0,0,0,0.12)" />
+              <polygon points="90,0 45,45 90,90" fill="rgba(0,0,0,0.06)" />
+              {/* medallion: dark seat → gold bevel ring → cream core → star */}
+              <circle cx="45" cy="45" r="15" fill="#8a5c10" />
+              <circle cx="45" cy="45" r="13.4" fill="url(#ls-med-ring)" />
+              <circle cx="45" cy="45" r="10" fill="url(#ls-med-core)" stroke="#d9a636" strokeWidth="1.4" />
               <path
-                d="M45 35.5l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6-4.5-4.2 6.1-.7z"
-                fill="#f0a10c"
-                stroke="#a05a08"
-                strokeWidth="1.4"
+                d="M45 36.5l2.2 4.7 5.1.6-3.8 3.5 1 5-4.5-2.5-4.5 2.5 1-5-3.8-3.5 5.1-.6z"
+                fill="url(#ls-med-star)"
+                stroke="#8a5c10"
+                strokeWidth="1.1"
+                strokeLinejoin="round"
               />
             </svg>
           </div>
@@ -417,7 +522,7 @@ export default function Board({
                       pointerEvents: 'none',
                     }}
                   >
-                    <Pawn color={color} glow={false} tap={false} onClick={() => undefined} tokenId={t.id} uid={`f${color}${t.id}`} />
+                    <Pawn3D color={color} glow={false} tap={false} onClick={() => undefined} tokenId={t.id} uid={`f${color}${t.id}`} />
                   </div>
                 )
               })
@@ -458,7 +563,7 @@ export default function Board({
                     animate={{ scale: hopping ? 1.28 : 1 }}
                     transition={{ type: 'spring', stiffness: 330, damping: hopping ? 14 : 20 }}
                   >
-                    <Pawn
+                    <Pawn3D
                       color={p.color}
                       glow={isGlowing}
                       tap={clickable(p.color, t.id)}
@@ -476,6 +581,35 @@ export default function Board({
                 )
               })
           )}
+
+          {/* capture burst — sparkling ring where a knocked-out token lands home */}
+          <AnimatePresence>
+            {captureFx.map((f) => (
+              <motion.div
+                key={f.key}
+                className="pointer-events-none absolute z-[45]"
+                style={{
+                  left: pct(f.c),
+                  top: pct(f.r),
+                  width: pct(2.6),
+                  height: pct(2.6),
+                  x: '-50%',
+                  y: '-50%',
+                }}
+                initial={{ opacity: 0.95, scale: 0.4, rotate: 0 }}
+                animate={{ opacity: 0, scale: 1.7, rotate: 60 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.9, ease: 'easeOut' }}
+                aria-hidden
+              >
+                <span
+                  className="absolute inset-0 rounded-full"
+                  style={{ border: `3px solid ${COLOR_HEX[f.color].light}`, boxShadow: `0 0 16px 5px ${COLOR_HEX[f.color].glow}` }}
+                />
+                <span className="absolute inset-[26%] rounded-full border-2 border-dashed" style={{ borderColor: '#ffd977' }} />
+              </motion.div>
+            ))}
+          </AnimatePresence>
 
           {/* a dice plate in EVERY active player's corner — Ludo Star style.
               Only the turn player's plate is live; the others sit dimmed. */}
@@ -544,104 +678,6 @@ export default function Board({
           </AnimatePresence>
         </div>
       </div>
-    </div>
-  )
-}
-
-// ---------------- Pawn (premium round token) ----------------
-
-function Pawn({
-  color,
-  glow,
-  tap,
-  onClick,
-  tokenId,
-  uid,
-}: {
-  color: Color
-  /** glowing ring = this token may move now (turn player only) */
-  glow: boolean
-  /** tappable on this device (implies glow) */
-  tap: boolean
-  onClick: () => void
-  tokenId: number
-  uid: string
-}) {
-  const c = COLOR_HEX[color]
-  const bodyId = `bd-${uid}`
-
-  const svg = (
-    <svg viewBox="0 0 64 64" className="h-full w-full overflow-visible">
-      <defs>
-        <radialGradient id={bodyId} cx="0.34" cy="0.28" r="1">
-          <stop offset="0" stopColor={c.light} />
-          <stop offset="0.52" stopColor={c.main} />
-          <stop offset="1" stopColor={c.dark} />
-        </radialGradient>
-      </defs>
-      {/* ground shadow */}
-      <ellipse cx="32" cy="56" rx="19" ry="5" fill="rgba(10,14,40,0.38)" />
-      {/* dark rim */}
-      <circle cx="32" cy="32" r="23.5" fill={c.dark} />
-      {/* round body with crisp white ring — reads clearly on any cell */}
-      <circle cx="32" cy="31" r="21" fill={`url(#${bodyId})`} stroke="rgba(255,255,255,0.95)" strokeWidth="3.2" />
-      {/* inner ring detail */}
-      <circle cx="32" cy="31" r="12.5" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2.4" />
-      {/* gloss */}
-      <ellipse cx="24.5" cy="21.5" rx="6.6" ry="4.4" fill="rgba(255,255,255,0.9)" transform="rotate(-22 24.5 21.5)" />
-      {/* bottom rim light */}
-      <path d="M14 40 A 21 21 0 0 0 50 40" fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  )
-
-  if (tap) {
-    return (
-      <motion.button
-        data-token={`${color}-${tokenId}`}
-        onClick={onClick}
-        whileTap={{ scale: 0.82 }}
-        animate={{ y: [0, -5, 0] }}
-        transition={{ repeat: Infinity, duration: 0.85, ease: 'easeInOut' }}
-        className="absolute inset-0 z-20 cursor-pointer"
-        aria-label={`${color} token ${tokenId} (movable)`}
-      >
-        {svg}
-        <motion.span
-          className="absolute inset-[-12%] rounded-full"
-          style={{ border: '2.5px dashed #ffd977' }}
-          animate={{ rotate: 360 }}
-          transition={{ repeat: Infinity, duration: 3.2, ease: 'linear' }}
-        />
-        <span
-          className="absolute inset-[-12%] rounded-full"
-          style={{ boxShadow: `0 0 16px 3px ${c.glow}` }}
-        />
-      </motion.button>
-    )
-  }
-
-  if (glow) {
-    // bot / remote-human display glow — no pointer, but clearly highlighted
-    return (
-      <div className="absolute inset-0 z-10" aria-hidden>
-        {svg}
-        <motion.span
-          className="absolute inset-[-12%] rounded-full"
-          style={{ border: '2.5px dashed rgba(255,217,119,0.85)' }}
-          animate={{ rotate: 360 }}
-          transition={{ repeat: Infinity, duration: 3.2, ease: 'linear' }}
-        />
-        <span
-          className="absolute inset-[-12%] rounded-full"
-          style={{ boxShadow: `0 0 14px 2px ${c.glow}` }}
-        />
-      </div>
-    )
-  }
-
-  return (
-    <div className="absolute inset-0 z-10" aria-hidden>
-      {svg}
     </div>
   )
 }
